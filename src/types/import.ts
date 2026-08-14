@@ -1,0 +1,26 @@
+import type { ExcelPreview } from './template'
+import type { HeaderMapping, SourceColumn } from './mapping'
+
+export type ImportStatus = 'pending' | 'confirmed' | 'error'
+
+export interface ImportSession {
+  id: string
+  file_path: string
+  file_name: string
+  sheet_name: string
+  sheets: string[]
+  header_row: number
+  data_start_row: number
+  source_columns: SourceColumn[]
+  mappings: HeaderMapping[]
+  preview: ExcelPreview
+  confirmed: boolean
+  status: ImportStatus
+  error: string | null
+}
+
+export interface OutputFile {
+  session_id: string
+  path: string
+  file_name: string
+}

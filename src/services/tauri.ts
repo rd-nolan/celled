@@ -1,0 +1,145 @@
+import { invoke } from '@tauri-apps/api/core'
+import { open, save } from '@tauri-apps/plugin-dialog'
+
+import type { ImportSession, OutputFile } from '@/types/import'
+import type { AppInfo, TemplateAnalysis, TemplateSchema } from '@/types/template'
+
+const EXCEL_FILTERS = [{ name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm'] }]
+
+export async function pickExcelFile(): Promise<string | null> {
+  const selected = await open({
+    multiple: false,
+    filters: EXCEL_FILTERS,
+  })
+  if (Array.isArray(selected)) {
+    return selected[0] ?? null
+  }
+  return selected
+}
+
+export async function pickExcelFiles(): Promise<string[]> {
+  const selected = await open({
+    multiple: true,
+    filters: EXCEL_FILTERS,
+  })
+  if (!selected) {
+    return []
+  }
+  return Array.isArray(selected) ? selected : [selected]
+}
+
+export async function pickDirectory(): Promise<string | null> {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+  })
+  if (Array.isArray(selected)) {
+    return selected[0] ?? null
+  }
+  return selected
+}
+
+export async function pickSavePath(defaultPath: string): Promise<string | null> {
+  return save({
+    defaultPath,
+    filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+  })
+}
+
+export function analyzeTemplate(path: string, sheetName?: string) {
+  return invoke<TemplateAnalysis>('analyze_template', {
+    path,
+    sheetName: sheetName ?? null,
+  })
+}
+
+export function updateTemplateHeaderRow(path: string, sheetName: string, headerRow: number) {
+  return invoke<TemplateAnalysis>('update_template_header_row', {
+    path,
+    sheetName,
+    headerRow,
+  })
+}
+
+export function confirmTemplate(payload: {
+  filePath: string
+  fileName: string
+  sheetName: string
+  headerRow: number
+  dataStartRow?: number
+}) {
+  return invoke<TemplateSchema>('confirm_template', {
+    request: {
+      file_path: payload.filePath,
+      file_name: payload.fileName,
+      sheet_name: payload.sheetName,
+      header_row: payload.headerRow,
+      data_start_row: payload.dataStartRow ?? null,
+    },
+  })
+}
+
+export function analyzeDataExcel(path: string, templateId: string, sheetName?: string) {
+  return invoke<ImportSession>('analyze_data_excel', {
+    path,
+    templateId,
+    sheetName: sheetName ?? null,
+  })
+}
+
+export function updateImportHeaderRow(sessionId: string, headerRow: number) {
+  return invoke<ImportSession>('update_import_header_row', {
+    sessionId,
+    headerRow,
+  })
+}
+
+export function updateImportSheet(sessionId: string, sheetName: string) {
+  return invoke<ImportSession>('update_import_sheet', {
+    sessionId,
+    sheetName,
+  })
+}
+
+export function updateMapping(
+  sessionId: string,
+  sourceColumnIndex: number,
+  targetColumnIndex: number | null,
+) {
+  return invoke<ImportSession>('update_mapping', {
+    request: {
+      session_id: sessionId,
+      source_column_index: sourceColumnIndex,
+      target_column_index: targetColumnIndex,
+    },
+  })
+}
+
+export function confirmMapping(sessionId: string) {
+  return invoke<ImportSession>('confirm_mapping', {
+    request: { session_id: sessionId },
+  })
+}
+
+export function convertFiles(sessionIds: string[], outputDir: string) {
+  return invoke<OutputFile[]>('convert_files', {
+    request: {
+      session_ids: sessionIds,
+      output_dir: outputDir,
+    },
+  })
+}
+
+export function getAppInfo() {
+  return invoke<AppInfo>('get_app_info')
+}
+
+export function asErrorMessage(error: unknown): string {
+  if (typeof error === 'string') {
+    return error
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return '发生未知错误'
+}
