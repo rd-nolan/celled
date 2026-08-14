@@ -38,6 +38,10 @@ jobs:
             name: macos-aarch64
           - platform: windows-latest
             # Always x86_64 (HostX64/x64). Do not add ARM64 ort binaries or extra --target.
+            # Artifact is NSIS only (no MSI). WiX 3 light.exe often cannot run on
+            # windows-2025 (missing .NET 3.5 / light.exe 0xc000007b).
+            # GH Actions CAN: cargo test, tauri build, launch celld.exe (0xc000007b fails
+            # at process create, before UI), dump PE IAT. CANNOT: GUI clicking / visual QA.
             target: x86_64-pc-windows-msvc
             name: windows-x64
           # ubuntu-24.04: pykeio ort's prebuilt ONNX Runtime needs glibc 2.38+
@@ -86,6 +90,13 @@ jobs:
           workspaces: ./src-tauri -> target
           shared-key: ${{ matrix.target }}
 
+      # Default features only (onnx is optional). cargo test here also compiles the
+      # Windows MSVC binary without ort, so a link/CRT mismatch fails before packaging.
+      - name: Run Rust unit tests
+        if: runner.os == 'Windows'
+        working-directory: src-tauri
+        run: cargo test --locked --target ${{ matrix.target }}
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
@@ -96,12 +107,118 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
+          # Windows: NSIS only (bundle.targets omits msi). WiX 3 light.exe often
+          # cannot run on windows-2025 (missing .NET 3.5 / light.exe 0xc000007b).
           args: --target ${{ matrix.target }}
           # Create a draft GitHub Release only for v* tags. Branch pushes stay artifact-only.
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('celld {0}', github.ref_name) || '' }}
           releaseBody: See the assets to download this version and install.
           releaseDraft: true
+
+      # Default tauri build does not pass --features onnx; fail if the IAT still
+      # names DirectML / ONNX Runtime (the 0xc000007b class of missing-DLL load).
+      - name: Check Windows PE imports
+        id: win_exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = $null
+          $releaseRoot = Join-Path $pwd "src-tauri/target/${{ matrix.target }}/release"
+          foreach ($name in @('celld.exe', 'Celled.exe')) {
+            $candidate = Join-Path $releaseRoot $name
+            if (Test-Path -LiteralPath $candidate) {
+              $exe = $candidate
+              break
+            }
+          }
+          if (-not $exe) {
+            $exe = Get-ChildItem -LiteralPath $releaseRoot -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '^(celld|Celled)\.exe$' -and $_.FullName -notmatch '[\\/]bundle[\\/]' } |
+              Select-Object -ExpandProperty FullName -First 1
+          }
+          if (-not $exe) {
+            throw "Could not find celld.exe / Celled.exe under $releaseRoot (excluding bundle/)"
+          }
+          Write-Host "App exe: $exe"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$exe"
+
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path -LiteralPath $vswhere)) {
+            throw "vswhere.exe not found; cannot locate dumpbin on this runner"
+          }
+          $dumpbin = & $vswhere -latest -products * -find '**\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) {
+            throw 'dumpbin.exe not found (expected on windows-latest / windows-2025 with VS)'
+          }
+          Write-Host "dumpbin: $dumpbin"
+          $dump = & $dumpbin /DEPENDENTS $exe 2>&1 | Out-String
+          Write-Host $dump
+          $imports = @([regex]::Matches($dump, '(?im)^\s+([A-Za-z0-9_\-\.]+\.dll)\s*$') |
+            ForEach-Object { $_.Groups[1].Value })
+          if ($imports.Count -eq 0) {
+            throw "Could not list PE dependents of $exe"
+          }
+          $forbidden = @('directml.dll', 'onnxruntime.dll')
+          $hits = @($imports | Where-Object { $forbidden -contains $_.ToLowerInvariant() })
+          if ($hits.Count -gt 0) {
+            throw "Default (no --features onnx) exe IAT-imports forbidden DLL(s): $($hits -join ', '). ort/DirectML must not be linked when onnx is off."
+          }
+          Write-Host 'PE import check passed (no directml.dll / onnxruntime.dll).'
+
+      # 0xc000007b (STATUS_INVALID_IMAGE_FORMAT) fails at process create, before UI.
+      # Missing WebView2 on the runner can kill the process after start — that is not 0xc000007b.
+      - name: Smoke-launch Windows exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = '${{ steps.win_exe.outputs.path }}'
+          if (-not $exe -or -not (Test-Path -LiteralPath $exe)) {
+            throw "Missing exe path from previous step: '$exe'"
+          }
+          Write-Host "Launching $exe (15s). 0xc000007b / STATUS_INVALID_IMAGE_FORMAT fails the job."
+          Write-Host 'WebView2 may be missing on the runner; a start-then-die for WebView2 is not 0xc000007b.'
+
+          $STATUS_INVALID_IMAGE_FORMAT = [uint32]0xC000007B
+          function Get-UnsignedExitCode([int]$code) {
+            [BitConverter]::ToUInt32([BitConverter]::GetBytes([int32]$code), 0)
+          }
+
+          $psi = New-Object System.Diagnostics.ProcessStartInfo
+          $psi.FileName = $exe
+          $psi.WorkingDirectory = [System.IO.Path]::GetDirectoryName($exe)
+          $psi.UseShellExecute = $false
+          $psi.CreateNoWindow = $true
+          $proc = New-Object System.Diagnostics.Process
+          $proc.StartInfo = $psi
+          try {
+            $null = $proc.Start()
+          } catch [System.ComponentModel.Win32Exception] {
+            $native = $_.Exception.NativeErrorCode
+            $msg = $_.Exception.Message
+            Write-Host "Start failed: $msg NativeErrorCode=$native"
+            $unsignedNative = Get-UnsignedExitCode $native
+            if ($unsignedNative -eq $STATUS_INVALID_IMAGE_FORMAT -or $native -eq 193 -or $msg -match '0xc000007b') {
+              throw "STATUS_INVALID_IMAGE_FORMAT (0xc000007b) starting $exe"
+            }
+            throw
+          }
+
+          if (-not $proc.WaitForExit(15000)) {
+            Write-Host 'Still running after 15s — loader accepted the image (not 0xc000007b).'
+            try { $proc.Kill() } catch {}
+            exit 0
+          }
+
+          $code = $proc.ExitCode
+          $unsigned = Get-UnsignedExitCode $code
+          Write-Host ("Exited with {0} (0x{1:X8})" -f $code, $unsigned)
+          if ($unsigned -eq $STATUS_INVALID_IMAGE_FORMAT) {
+            throw "STATUS_INVALID_IMAGE_FORMAT (0xc000007b) launching $exe"
+          }
+          Write-Host 'Non-0xc000007b exit (missing WebView2 on the runner is expected).'
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -110,7 +227,6 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
-            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage

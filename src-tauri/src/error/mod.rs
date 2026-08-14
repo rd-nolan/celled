@@ -18,8 +18,10 @@ pub enum AppError {
     InvalidMapping(String),
     #[error("{0}")]
     MappingConflict(String),
+    #[cfg(feature = "onnx")]
     #[error("模型加载失败：{0}")]
     ModelLoadFailed(String),
+    #[cfg(feature = "onnx")]
     #[error("模型推理失败：{0}")]
     ModelInferenceFailed(String),
     #[error("数据库错误：{0}")]
