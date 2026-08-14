@@ -22,7 +22,10 @@ pub fn build_preview(sheet: &SheetData, header_row: usize) -> ExcelPreview {
     }
 }
 
-pub fn headers_at(sheet: &SheetData, header_row: usize) -> Result<Vec<String>, crate::error::AppError> {
+pub fn headers_at(
+    sheet: &SheetData,
+    header_row: usize,
+) -> Result<Vec<String>, crate::error::AppError> {
     let idx = header_row.saturating_sub(1);
     sheet
         .rows
@@ -31,7 +34,12 @@ pub fn headers_at(sheet: &SheetData, header_row: usize) -> Result<Vec<String>, c
         .ok_or(crate::error::AppError::InvalidHeaderRow)
 }
 
-pub fn sample_values(sheet: &SheetData, data_start_row: usize, column: usize, limit: usize) -> Vec<String> {
+pub fn sample_values(
+    sheet: &SheetData,
+    data_start_row: usize,
+    column: usize,
+    limit: usize,
+) -> Vec<String> {
     let start = data_start_row.saturating_sub(1);
     sheet
         .rows

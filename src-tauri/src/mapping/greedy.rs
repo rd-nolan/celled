@@ -85,7 +85,11 @@ mod tests {
             },
         ]);
         assert_eq!(chosen.len(), 2);
-        assert!(chosen.iter().any(|a| a.source_column_index == 0 && a.target_column_index == 1));
-        assert!(chosen.iter().any(|a| a.source_column_index == 1 && a.target_column_index == 2));
+        assert!(chosen
+            .iter()
+            .any(|a| a.source_column_index == 0 && a.target_column_index == 1));
+        assert!(chosen
+            .iter()
+            .any(|a| a.source_column_index == 1 && a.target_column_index == 2));
     }
 }

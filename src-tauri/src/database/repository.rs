@@ -111,8 +111,8 @@ impl Database {
             if version != model_version {
                 return Ok(None);
             }
-            let vector: Vec<f32> = serde_json::from_str(&json)
-                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            let vector: Vec<f32> =
+                serde_json::from_str(&json).map_err(|e| AppError::DatabaseError(e.to_string()))?;
             embeddings.push(vector);
         }
         if embeddings.is_empty() {
@@ -198,7 +198,6 @@ fn now_rfc3339() -> String {
     chrono::Local::now().to_rfc3339()
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::Database;
@@ -232,4 +231,3 @@ mod tests {
         assert_eq!(hit.usage_count, 2);
     }
 }
-

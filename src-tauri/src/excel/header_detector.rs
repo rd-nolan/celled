@@ -223,10 +223,7 @@ mod tests {
 
     #[test]
     fn detects_first_row_headers() {
-        let rows = vec![
-            row(&["姓名", "手机号"]),
-            row(&["张三", "13812345678"]),
-        ];
+        let rows = vec![row(&["姓名", "手机号"]), row(&["张三", "13812345678"])];
         let result = HeaderDetector::detect(&rows);
         assert_eq!(result.row_index, 1, "expected row 1, got {:?}", result);
     }

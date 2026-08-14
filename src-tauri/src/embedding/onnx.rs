@@ -188,7 +188,9 @@ fn extract_f32_tensor(
     for (_, output) in outputs.iter() {
         return tensor_to_owned(&output);
     }
-    Err(AppError::ModelInferenceFailed("missing embedding output".into()))
+    Err(AppError::ModelInferenceFailed(
+        "missing embedding output".into(),
+    ))
 }
 
 fn tensor_to_owned(value: &ort::value::Value) -> Result<(Vec<i64>, Vec<f32>), AppError> {

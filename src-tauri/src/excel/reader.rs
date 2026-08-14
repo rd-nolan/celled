@@ -27,7 +27,11 @@ impl ExcelReader {
         }
         for name in &sheets {
             let data = Self::read_sheet(path, name, Some(8))?;
-            if data.rows.iter().any(|row| row.iter().any(|c| !c.trim().is_empty())) {
+            if data
+                .rows
+                .iter()
+                .any(|row| row.iter().any(|c| !c.trim().is_empty()))
+            {
                 return Ok(name.clone());
             }
         }

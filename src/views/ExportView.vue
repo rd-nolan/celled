@@ -55,7 +55,7 @@ const convertHint = computed(() => {
             转换完成
           </div>
           <p class="mt-0.5 text-xs text-primary-600">
-            已按模板表头，将所有确认文件的数据合并到一个 Excel 文件
+            已按模板表头，将所有确认文件的数据合并到一个 Excel 文件。来源列已按源文件名填充。
           </p>
         </div>
       </div>

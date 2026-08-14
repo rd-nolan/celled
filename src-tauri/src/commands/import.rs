@@ -126,7 +126,10 @@ fn update_import_header_row_inner(
             .sessions
             .lock()
             .map_err(|_| AppError::Internal("sessions lock poisoned".into()))?;
-        sessions.get(session_id).cloned().ok_or(AppError::SessionNotFound)?
+        sessions
+            .get(session_id)
+            .cloned()
+            .ok_or(AppError::SessionNotFound)?
     };
     let path = Path::new(&existing.file_path);
     let sheets = ExcelReader::list_sheets(path)?;
@@ -226,9 +229,12 @@ fn update_mapping_inner(
             .iter()
             .find(|c| c.index == target_index)
             .ok_or_else(|| AppError::InvalidMapping("模板字段不存在".into()))?;
-        if let Some(message) =
-            mapping_conflict_message(&session.mappings, request.source_column_index, target_index, &target.name)
-        {
+        if let Some(message) = mapping_conflict_message(
+            &session.mappings,
+            request.source_column_index,
+            target_index,
+            &target.name,
+        ) {
             return Err(AppError::MappingConflict(message));
         }
         let mapping = session
@@ -282,9 +288,10 @@ fn confirm_mapping_inner(
         }
     }
 
-    state.database.record_confirmed_mappings(&session.mappings)?;
+    state
+        .database
+        .record_confirmed_mappings(&session.mappings)?;
     session.confirmed = true;
     session.status = ImportStatus::Confirmed;
     Ok(session.clone())
 }
-

@@ -124,11 +124,7 @@ fn column_content_score(
             score = score.max(TOKEN_SUBSTRING_SCORE);
         }
         score = score.max(header_similarity(
-            token,
-            token_vec,
-            header,
-            header_vec,
-            corpus,
+            token, token_vec, header, header_vec, corpus,
         ));
     }
     score

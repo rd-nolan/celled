@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use tauri::State;
 
 use crate::app_state::AppState;
 use crate::commands::template::require_template;
-use crate::domain::{ConvertRequest, OutputFile};
+use crate::domain::{ConvertRequest, ImportSession, OutputFile};
 use crate::error::AppError;
 use crate::excel::{ExcelReader, ExcelTransformer, ExcelWriter};
 
@@ -19,7 +20,10 @@ pub async fn convert_files(
         .map_err(|e| AppError::Internal(e.to_string()))?
 }
 
-fn convert_files_inner(request: ConvertRequest, state: &AppState) -> Result<Vec<OutputFile>, AppError> {
+fn convert_files_inner(
+    request: ConvertRequest,
+    state: &AppState,
+) -> Result<Vec<OutputFile>, AppError> {
     let template = require_template(state)?;
     let sessions = state
         .sessions
@@ -29,24 +33,30 @@ fn convert_files_inner(request: ConvertRequest, state: &AppState) -> Result<Vec<
     if request.session_ids.is_empty() {
         return Err(AppError::NotAllConfirmed);
     }
+    let mut name_counts: HashMap<String, usize> = HashMap::new();
     for id in &request.session_ids {
         let session = sessions.get(id).ok_or(AppError::SessionNotFound)?;
         if !session.confirmed {
             return Err(AppError::NotAllConfirmed);
         }
+        *name_counts.entry(session.file_name.clone()).or_insert(0) += 1;
     }
 
+    let output_template = template.with_source_column();
     let mut merged_rows = Vec::new();
     for id in &request.session_ids {
         let session = sessions.get(id).ok_or(AppError::SessionNotFound)?;
-        let data = ExcelReader::read_sheet(Path::new(&session.file_path), &session.sheet_name, None)?;
+        let data =
+            ExcelReader::read_sheet(Path::new(&session.file_path), &session.sheet_name, None)?;
         let start = session.data_start_row.saturating_sub(1);
         let source_rows = if start < data.rows.len() {
             data.rows[start..].to_vec()
         } else {
             Vec::new()
         };
-        let transformed = ExcelTransformer::transform(&source_rows, &session.mappings, &template);
+        let label = source_label(session, &name_counts);
+        let transformed =
+            ExcelTransformer::transform(&source_rows, &session.mappings, &output_template, &label);
         merged_rows.extend(transformed);
     }
 
@@ -56,7 +66,7 @@ fn convert_files_inner(request: ConvertRequest, state: &AppState) -> Result<Vec<
             std::fs::create_dir_all(parent)?;
         }
     }
-    ExcelWriter::write_workbook(&output_path, &template, &merged_rows)?;
+    ExcelWriter::write_workbook(&output_path, &output_template, &merged_rows)?;
 
     let file_name = output_path
         .file_name()
@@ -79,6 +89,17 @@ pub fn merged_output_file_name(template_file_name: &str) -> String {
     match stem {
         Some(stem) => format!("{stem}_合并.xlsx"),
         None => "Celled_合并.xlsx".into(),
+    }
+}
+
+fn source_label(session: &ImportSession, name_counts: &HashMap<String, usize>) -> String {
+    let ambiguous = name_counts.get(&session.file_name).copied().unwrap_or(0) > 1;
+    if ambiguous {
+        session.file_path.clone()
+    } else if !session.file_name.is_empty() {
+        session.file_name.clone()
+    } else {
+        ExcelReader::file_name(Path::new(&session.file_path))
     }
 }
 
@@ -112,7 +133,12 @@ mod tests {
     use std::sync::Arc;
     use tempfile::tempdir;
 
-    fn mapping(source_index: usize, source_header: &str, target_index: usize, target_header: &str) -> HeaderMapping {
+    fn mapping(
+        source_index: usize,
+        source_header: &str,
+        target_index: usize,
+        target_header: &str,
+    ) -> HeaderMapping {
         HeaderMapping {
             source_column_index: source_index,
             source_header: source_header.into(),
@@ -136,7 +162,10 @@ mod tests {
 
     #[test]
     fn default_merged_name_uses_template_stem() {
-        assert_eq!(merged_output_file_name("人员信息.xlsx"), "人员信息_合并.xlsx");
+        assert_eq!(
+            merged_output_file_name("人员信息.xlsx"),
+            "人员信息_合并.xlsx"
+        );
         assert_eq!(merged_output_file_name(""), "Celled_合并.xlsx");
     }
 
@@ -146,20 +175,13 @@ mod tests {
         fixtures::write_simple(
             &dir.path().join("source-a.xlsx"),
             "Sheet1",
-            &[
-                &["姓名", "学生编号", "备注"],
-                &["张三", "A001", "忽略"],
-            ],
+            &[&["姓名", "学生编号", "备注"], &["张三", "A001", "忽略"]],
         )
         .unwrap();
         fixtures::write_simple(
             &dir.path().join("source-b.xlsx"),
             "Sheet1",
-            &[
-                &["名字", "学号"],
-                &["李四", "B002"],
-                &["王五", "B003"],
-            ],
+            &[&["名字", "学号"], &["李四", "B002"], &["王五", "B003"]],
         )
         .unwrap();
 
@@ -195,7 +217,11 @@ mod tests {
 
         let session_a = ImportSession {
             id: "a".into(),
-            file_path: dir.path().join("source-a.xlsx").to_string_lossy().to_string(),
+            file_path: dir
+                .path()
+                .join("source-a.xlsx")
+                .to_string_lossy()
+                .to_string(),
             file_name: "source-a.xlsx".into(),
             sheet_name: "Sheet1".into(),
             sheets: vec!["Sheet1".into()],
@@ -213,17 +239,18 @@ mod tests {
         };
         let session_b = ImportSession {
             id: "b".into(),
-            file_path: dir.path().join("source-b.xlsx").to_string_lossy().to_string(),
+            file_path: dir
+                .path()
+                .join("source-b.xlsx")
+                .to_string_lossy()
+                .to_string(),
             file_name: "source-b.xlsx".into(),
             sheet_name: "Sheet1".into(),
             sheets: vec!["Sheet1".into()],
             header_row: 1,
             data_start_row: 2,
             source_columns: vec![],
-            mappings: vec![
-                mapping(0, "名字", 0, "姓名"),
-                mapping(1, "学号", 1, "学号"),
-            ],
+            mappings: vec![mapping(0, "名字", 0, "姓名"), mapping(1, "学号", 1, "学号")],
             preview: preview("Sheet1"),
             confirmed: true,
             status: ImportStatus::Confirmed,
@@ -257,10 +284,10 @@ mod tests {
         assert!(output_path.exists());
 
         let data = ExcelReader::read_sheet(&output_path, "汇总", None).unwrap();
-        assert_eq!(data.rows[0], vec!["姓名", "学号", "班级"]);
-        assert_eq!(data.rows[1], vec!["张三", "A001", ""]);
-        assert_eq!(data.rows[2], vec!["李四", "B002", ""]);
-        assert_eq!(data.rows[3], vec!["王五", "B003", ""]);
+        assert_eq!(data.rows[0], vec!["姓名", "学号", "班级", "来源"]);
+        assert_eq!(data.rows[1], vec!["张三", "A001", "", "source-a.xlsx"]);
+        assert_eq!(data.rows[2], vec!["李四", "B002", "", "source-b.xlsx"]);
+        assert_eq!(data.rows[3], vec!["王五", "B003", "", "source-b.xlsx"]);
         assert_eq!(data.rows.len(), 4);
     }
 }
