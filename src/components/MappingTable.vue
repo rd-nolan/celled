@@ -51,23 +51,23 @@ const hasRows = computed(() => props.mappings.length > 0)
 </script>
 
 <template>
-  <div class="overflow-auto rounded-lg border border-neutral-200">
+  <div class="overflow-auto border border-primary-200">
     <table class="min-w-full border-collapse text-sm">
-      <thead class="sticky top-0 bg-[#fafafa]">
+      <thead class="sticky top-0 bg-primary-50">
         <tr>
-          <th class="border-b border-neutral-200 px-3 py-2 text-left font-medium text-neutral-600">数据字段</th>
-          <th class="border-b border-neutral-200 px-3 py-2 text-left font-medium text-neutral-600">数据示例</th>
-          <th class="border-b border-neutral-200 px-3 py-2 text-left font-medium text-neutral-600">模板字段</th>
-          <th class="border-b border-neutral-200 px-3 py-2 text-left font-medium text-neutral-600">匹配来源</th>
-          <th class="w-24 border-b border-neutral-200 px-3 py-2 text-left font-medium text-neutral-600">相似度</th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">数据字段</th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">数据示例</th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">模板字段</th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">匹配来源</th>
+          <th class="w-24 border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">相似度</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-neutral-200">
+      <tbody class="divide-y divide-primary-200">
         <tr v-for="mapping in mappings" :key="mapping.source_column_index" class="bg-white">
-          <td class="px-3 py-2 align-top font-medium text-neutral-900">
+          <td class="px-3 py-2 align-top font-medium text-primary-900">
             {{ mapping.source_header }}
           </td>
-          <td class="px-3 py-2 align-top text-xs text-neutral-500">
+          <td class="px-3 py-2 align-top text-xs text-primary-500">
             <div v-for="sample in samplesFor(mapping.source_column_index).slice(0, 3)" :key="sample">
               {{ sample }}
             </div>
@@ -75,7 +75,7 @@ const hasRows = computed(() => props.mappings.length > 0)
           </td>
           <td class="px-3 py-2 align-top">
             <select
-              class="h-8 w-full min-w-40 rounded-md border border-neutral-200 bg-white px-2 text-sm"
+              class="h-8 w-full min-w-40 rounded-md border border-primary-200 bg-white px-2 text-sm"
               :value="selectedValue(mapping)"
               @change="onChange(mapping.source_column_index, $event)"
             >
@@ -103,12 +103,12 @@ const hasRows = computed(() => props.mappings.length > 0)
           <td class="px-3 py-2 align-top">
             <StatusBadge :kind="mapping.source" />
           </td>
-          <td class="px-3 py-2 align-top text-neutral-600">
+          <td class="px-3 py-2 align-top text-primary-600">
             {{ similarityText(mapping) }}
           </td>
         </tr>
         <tr v-if="!hasRows">
-          <td colspan="5" class="px-3 py-8 text-center text-neutral-500">暂无字段可映射</td>
+          <td colspan="5" class="px-3 py-8 text-center text-primary-500">暂无字段可映射</td>
         </tr>
       </tbody>
     </table>

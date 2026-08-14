@@ -13,24 +13,38 @@ const templateStore = useTemplateStore()
 const templateReady = computed(() => templateStore.templateConfirmed)
 
 watch(templateReady, (ready) => {
-  if (!ready && currentStep.value > 1) {
+  if (ready) {
+    if (currentStep.value === 1) {
+      currentStep.value = 2
+    }
+    return
+  }
+  if (currentStep.value > 1) {
     currentStep.value = 1
   }
 })
+
+function goTo(step: number) {
+  currentStep.value = step
+}
 </script>
 
 <template>
-  <div class="flex h-screen flex-col overflow-hidden bg-[#f0f0f0] text-neutral-900">
+  <div class="flex h-screen flex-col overflow-hidden bg-white text-primary-900">
     <AppHeader />
     <AppSteps
       :current="currentStep"
       :template-ready="templateReady"
-      @change="currentStep = $event"
+      @change="goTo"
     />
     <main class="min-h-0 flex-1 overflow-hidden">
-      <TemplateView v-if="currentStep === 1" />
-      <ImportView v-else-if="currentStep === 2" />
-      <ExportView v-else />
+      <TemplateView v-if="currentStep === 1" @next="goTo(2)" />
+      <ImportView
+        v-else-if="currentStep === 2"
+        @prev="goTo(1)"
+        @next="goTo(3)"
+      />
+      <ExportView v-else @prev="goTo(2)" />
     </main>
   </div>
 </template>

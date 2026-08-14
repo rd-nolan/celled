@@ -77,9 +77,14 @@ export const useTemplateStore = defineStore('template', () => {
     }
   }
 
+  function setError(message: string) {
+    errorMessage.value = message
+  }
+
   async function confirm() {
     const analysis = templateAnalysis.value
     if (!analysis) {
+      errorMessage.value = '请先选择模板文件'
       return
     }
     loading.value = true
@@ -96,6 +101,7 @@ export const useTemplateStore = defineStore('template', () => {
       templateConfirmed.value = true
     } catch (error) {
       templateConfirmed.value = false
+      currentTemplate.value = null
       errorMessage.value = asErrorMessage(error)
     } finally {
       loading.value = false
@@ -121,6 +127,7 @@ export const useTemplateStore = defineStore('template', () => {
     loadTemplate,
     changeSheet,
     changeHeaderRow,
+    setError,
     confirm,
     reset,
   }

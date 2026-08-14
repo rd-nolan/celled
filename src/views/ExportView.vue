@@ -1,71 +1,105 @@
 <script setup lang="ts">
+import { CircleAlert, CircleCheck } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 
-import BaseButton from '@/components/ui/BaseButton.vue'
+import StepNav from '@/components/StepNav.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import { useImportStore } from '@/stores/import'
 
+const emit = defineEmits<{
+  prev: []
+}>()
+
 const importStore = useImportStore()
-const { sessions, confirmedCount, allConfirmed, converting, outputs, errorMessage } =
-  storeToRefs(importStore)
+const {
+  sessions,
+  confirmedCount,
+  allConfirmed,
+  converting,
+  outputs,
+  errorMessage,
+  convertSucceeded,
+  convertError,
+} = storeToRefs(importStore)
+
+const convertLabel = computed(() => (convertSucceeded.value ? '再次转换' : '开始转换'))
+const nextDisabled = computed(() => !allConfirmed.value || converting.value)
+const nextTitle = computed(() => {
+  if (allConfirmed.value) {
+    return ''
+  }
+  if (sessions.value.length === 0) {
+    return '请先添加并确认数据文件'
+  }
+  return '请先确认每个数据文件的映射'
+})
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col p-4">
-    <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div class="border-b border-neutral-200 px-4 py-3">
-        <div class="text-sm font-medium text-neutral-900">导出</div>
-        <div class="mt-0.5 text-xs text-neutral-500">
-          全部文件确认后，按模板字段顺序生成本地 xlsx。转换在 Rust 中完成。
+  <div class="flex h-full min-h-0 flex-col">
+    <div class="min-h-0 flex-1 overflow-auto px-5 py-4">
+      <div v-if="convertSucceeded" class="mb-4 flex items-start gap-3 bg-success/10 px-3 py-3">
+        <CircleCheck class="mt-0.5 h-5 w-5 shrink-0 text-success" />
+        <div>
+          <div class="text-sm font-medium text-success-fg">转换完成</div>
+          <p class="mt-0.5 text-xs text-primary-600">
+            已生成 {{ outputs.length }} 个文件
+          </p>
         </div>
       </div>
 
-      <div class="min-h-0 flex-1 overflow-auto p-4">
-        <div v-if="errorMessage" class="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {{ errorMessage }}
+      <div v-else-if="convertError" class="mb-4 flex items-start gap-3 bg-error/10 px-3 py-3">
+        <CircleAlert class="mt-0.5 h-5 w-5 shrink-0 text-error" />
+        <div>
+          <div class="text-sm font-medium text-error-fg">转换失败</div>
+          <p class="mt-0.5 text-sm text-error-fg">
+            {{ convertError }}
+          </p>
         </div>
+      </div>
 
-        <div class="mb-4 text-sm text-neutral-600">
-          {{ sessions.length }} 个文件，{{ confirmedCount }} 已确认
-        </div>
+      <div v-else-if="errorMessage" class="mb-4 bg-error/10 px-3 py-2 text-sm text-error-fg">
+        {{ errorMessage }}
+      </div>
 
-        <ul class="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
-          <li
-            v-for="session in sessions"
-            :key="session.id"
-            class="flex items-center justify-between px-3 py-2 text-sm"
-          >
-            <span class="truncate text-neutral-900">{{ session.file_name }}</span>
-            <StatusBadge :kind="session.confirmed ? 'confirmed' : 'pending'" />
-          </li>
-          <li v-if="sessions.length === 0" class="px-3 py-8 text-center text-sm text-neutral-500">
-            还没有数据文件。
+      <div class="mb-3 text-sm text-primary-600">
+        {{ sessions.length }} 个文件，{{ confirmedCount }} 已确认
+      </div>
+
+      <ul class="divide-y divide-primary-200 border border-primary-200">
+        <li
+          v-for="session in sessions"
+          :key="session.id"
+          class="flex items-center justify-between px-3 py-2 text-sm"
+        >
+          <span class="truncate text-primary-900">{{ session.file_name }}</span>
+          <StatusBadge :kind="session.confirmed ? 'confirmed' : 'pending'" />
+        </li>
+        <li v-if="sessions.length === 0" class="px-3 py-8 text-center text-sm text-primary-500">
+          还没有数据文件。
+        </li>
+      </ul>
+
+      <div v-if="outputs.length > 0" class="mt-6">
+        <div class="mb-2 text-xs font-medium text-primary-500">输出文件</div>
+        <ul class="space-y-1 text-sm text-primary-800">
+          <li v-for="file in outputs" :key="file.path" class="truncate" :title="file.path">
+            {{ file.path }}
           </li>
         </ul>
-
-        <div v-if="outputs.length > 0" class="mt-6">
-          <div class="mb-2 text-xs font-medium text-neutral-500">输出文件</div>
-          <ul class="space-y-1 text-sm text-neutral-800">
-            <li v-for="file in outputs" :key="file.path" class="truncate">
-              {{ file.path }}
-            </li>
-          </ul>
-        </div>
       </div>
+    </div>
 
-      <div class="flex items-center justify-between border-t border-neutral-200 bg-[#fafafa] px-4 py-3">
-        <div class="text-xs text-neutral-500">
-          {{ allConfirmed ? '可以开始转换' : '请先确认每个数据文件的映射' }}
-        </div>
-        <BaseButton
-          variant="primary"
-          :disabled="!allConfirmed"
-          :loading="converting"
-          @click="importStore.startConvert"
-        >
-          开始转换
-        </BaseButton>
-      </div>
-    </section>
+    <StepNav
+      :next-disabled="nextDisabled"
+      :next-loading="converting"
+      :next-label="convertLabel"
+      :next-title="nextTitle"
+      @prev="emit('prev')"
+      @next="importStore.startConvert"
+    >
+      {{ allConfirmed ? (convertSucceeded ? '可再次选择输出目录并转换' : '可以开始转换') : nextTitle }}
+    </StepNav>
   </div>
 </template>

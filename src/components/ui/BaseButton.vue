@@ -19,11 +19,11 @@ const props = withDefaults(
 const buttonClass = computed(() => {
   const variantClass = {
     primary:
-      'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 disabled:border-neutral-300 disabled:bg-neutral-300',
+      'border-primary-950 bg-primary-950 text-primary-50 hover:bg-primary-800 disabled:border-primary-300 disabled:bg-primary-300',
     secondary:
-      'border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50 disabled:text-neutral-400',
+      'border-primary-200 bg-white text-primary-900 hover:bg-primary-50 disabled:text-primary-400',
     ghost:
-      'border-transparent bg-transparent text-neutral-600 hover:bg-neutral-100 disabled:text-neutral-400',
+      'border-transparent bg-transparent text-primary-600 hover:bg-primary-100 disabled:text-primary-400',
   }[props.variant]
 
   const sizeClass = props.size === 'sm' ? 'h-8 px-2.5 text-xs' : 'h-9 px-3 text-sm'

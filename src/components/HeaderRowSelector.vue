@@ -22,10 +22,10 @@ function onChange(event: Event) {
 </script>
 
 <template>
-  <label class="flex items-center gap-2 text-sm text-neutral-700">
-    <span class="shrink-0 text-neutral-500">表头所在行</span>
+  <label class="flex items-center gap-2 text-sm text-primary-700">
+    <span class="shrink-0 text-primary-500">表头所在行</span>
     <select
-      class="h-8 rounded-md border border-neutral-200 bg-white px-2 text-sm text-neutral-900"
+      class="h-8 rounded-md border border-primary-200 bg-white px-2 text-sm text-primary-900"
       :value="headerRow"
       @change="onChange"
     >

@@ -24,6 +24,8 @@ export const useImportStore = defineStore('import', () => {
   const mappingError = shallowRef('')
   const outputs = ref<OutputFile[]>([])
   const analyzingLabel = shallowRef('')
+  const convertSucceeded = shallowRef(false)
+  const convertError = shallowRef('')
 
   const activeSession = computed(
     () => sessions.value.find((session) => session.id === activeSessionId.value) ?? null,
@@ -43,18 +45,28 @@ export const useImportStore = defineStore('import', () => {
     activeSessionId.value = next.id
   }
 
-  async function addFiles() {
+  function setError(message: string) {
+    errorMessage.value = message
+  }
+
+  function clearConvertResult() {
+    convertSucceeded.value = false
+    convertError.value = ''
+    outputs.value = []
+  }
+
+  async function addFilesFromPaths(paths: string[]) {
     const template = useTemplateStore().currentTemplate
     if (!template) {
       errorMessage.value = '请先确认模板'
       return
     }
-    const paths = await pickExcelFiles()
     if (paths.length === 0) {
       return
     }
     analyzingFiles.value = true
     errorMessage.value = ''
+    clearConvertResult()
     try {
       for (const path of paths) {
         analyzingLabel.value = path.split(/[\\/]/).pop() ?? path
@@ -67,6 +79,19 @@ export const useImportStore = defineStore('import', () => {
       analyzingFiles.value = false
       analyzingLabel.value = ''
     }
+  }
+
+  async function addFiles() {
+    const template = useTemplateStore().currentTemplate
+    if (!template) {
+      errorMessage.value = '请先确认模板'
+      return
+    }
+    const paths = await pickExcelFiles()
+    if (paths.length === 0) {
+      return
+    }
+    await addFilesFromPaths(paths)
   }
 
   function selectSession(id: string) {
@@ -138,13 +163,19 @@ export const useImportStore = defineStore('import', () => {
     }
     converting.value = true
     errorMessage.value = ''
+    convertSucceeded.value = false
+    convertError.value = ''
+    outputs.value = []
     try {
       outputs.value = await convertFiles(
         sessions.value.map((session) => session.id),
         outputDir,
       )
+      convertSucceeded.value = true
     } catch (error) {
-      errorMessage.value = asErrorMessage(error)
+      const message = asErrorMessage(error)
+      convertError.value = message
+      errorMessage.value = message
     } finally {
       converting.value = false
     }
@@ -156,6 +187,8 @@ export const useImportStore = defineStore('import', () => {
     outputs.value = []
     errorMessage.value = ''
     mappingError.value = ''
+    convertSucceeded.value = false
+    convertError.value = ''
   }
 
   return {
@@ -168,8 +201,12 @@ export const useImportStore = defineStore('import', () => {
     errorMessage,
     mappingError,
     outputs,
+    convertSucceeded,
+    convertError,
     confirmedCount,
     allConfirmed,
+    setError,
+    addFilesFromPaths,
     addFiles,
     selectSession,
     changeHeaderRow,

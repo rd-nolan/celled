@@ -4,7 +4,19 @@ import { open, save } from '@tauri-apps/plugin-dialog'
 import type { ImportSession, OutputFile } from '@/types/import'
 import type { AppInfo, TemplateAnalysis, TemplateSchema } from '@/types/template'
 
-const EXCEL_FILTERS = [{ name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm'] }]
+export const EXCEL_EXTENSIONS = ['xlsx', 'xls', 'xlsm'] as const
+
+const EXCEL_FILTERS = [{ name: 'Excel', extensions: [...EXCEL_EXTENSIONS] }]
+
+export function isExcelPath(path: string): boolean {
+  const base = path.split(/[\\/]/).pop() ?? path
+  const dot = base.lastIndexOf('.')
+  if (dot <= 0) {
+    return false
+  }
+  const ext = base.slice(dot + 1).toLowerCase()
+  return (EXCEL_EXTENSIONS as readonly string[]).includes(ext)
+}
 
 export async function pickExcelFile(): Promise<string | null> {
   const selected = await open({

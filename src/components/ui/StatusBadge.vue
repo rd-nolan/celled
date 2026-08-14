@@ -28,16 +28,16 @@ const label = computed(() => {
 
 const badgeClass = computed(() => {
   const classes: Record<BadgeKind, string> = {
-    exact: 'bg-emerald-50 text-emerald-800',
-    normalized_exact: 'bg-emerald-50 text-emerald-800',
-    history: 'bg-sky-50 text-sky-800',
-    alias: 'bg-violet-50 text-violet-800',
-    embedding: 'bg-amber-50 text-amber-800',
-    manual: 'bg-neutral-100 text-neutral-700',
-    unmatched: 'bg-neutral-100 text-neutral-500',
-    pending: 'bg-amber-50 text-amber-800',
-    confirmed: 'bg-emerald-50 text-emerald-800',
-    error: 'bg-red-50 text-red-700',
+    exact: 'bg-success/10 text-success-fg',
+    normalized_exact: 'bg-success/10 text-success-fg',
+    history: 'bg-accent-100 text-accent-800',
+    alias: 'bg-secondary-100 text-secondary-800',
+    embedding: 'bg-warning/10 text-warning-fg',
+    manual: 'bg-primary-100 text-primary-700',
+    unmatched: 'bg-primary-100 text-primary-500',
+    pending: 'bg-warning/10 text-warning-fg',
+    confirmed: 'bg-success/10 text-success-fg',
+    error: 'bg-error/10 text-error-fg',
   }
   return classes[props.kind]
 })
