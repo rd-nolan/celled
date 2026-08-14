@@ -181,7 +181,7 @@ jobs:
           Write-Host "Launching $exe (15s). 0xc000007b / STATUS_INVALID_IMAGE_FORMAT fails the job."
           Write-Host 'WebView2 may be missing on the runner; a start-then-die for WebView2 is not 0xc000007b.'
 
-          $STATUS_INVALID_IMAGE_FORMAT = [uint32]0xC000007B
+          $STATUS_INVALID_IMAGE_FORMAT = [Convert]::ToUInt32('C000007B', 16)
           function Get-UnsignedExitCode([int]$code) {
             [BitConverter]::ToUInt32([BitConverter]::GetBytes([int32]$code), 0)
           }
