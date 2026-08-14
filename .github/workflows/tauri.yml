@@ -286,6 +286,9 @@ jobs:
       - name: Publish installers on the tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # download-artifact writes into dist/; this job never checks out .git,
+          # so gh must not infer the repo from cwd.
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
@@ -316,11 +319,12 @@ jobs:
           echo "Uploading to ${{ github.ref_name }}:"
           printf '  %s\n' "${unique[@]}"
 
-          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
-            gh release edit "${{ github.ref_name }}" --draft=false
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "${{ github.ref_name }}" --repo "${{ github.repository }}" --draft=false
           else
             gh release create "${{ github.ref_name }}" \
+              --repo "${{ github.repository }}" \
               --title "celld ${{ github.ref_name }}" \
               --notes "See the assets to download this version and install."
           fi
-          gh release upload "${{ github.ref_name }}" "${unique[@]}" --clobber
+          gh release upload "${{ github.ref_name }}" "${unique[@]}" --repo "${{ github.repository }}" --clobber
