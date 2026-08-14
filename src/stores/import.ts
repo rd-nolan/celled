@@ -1,6 +1,7 @@
+import type { ImportSession, OutputFile } from '@/types/import'
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
 
+import { computed, ref, shallowRef } from 'vue'
 import {
   analyzeDataExcel,
   asErrorMessage,
@@ -12,7 +13,6 @@ import {
   updateImportSheet,
   updateMapping,
 } from '@/services/tauri'
-import type { ImportSession, OutputFile } from '@/types/import'
 import { useTemplateStore } from '@/stores/template'
 
 export const useImportStore = defineStore('import', () => {
@@ -28,18 +28,19 @@ export const useImportStore = defineStore('import', () => {
   const convertError = shallowRef('')
 
   const activeSession = computed(
-    () => sessions.value.find((session) => session.id === activeSessionId.value) ?? null,
+    () => sessions.value.find(session => session.id === activeSessionId.value) ?? null,
   )
-  const confirmedCount = computed(() => sessions.value.filter((session) => session.confirmed).length)
+  const confirmedCount = computed(() => sessions.value.filter(session => session.confirmed).length)
   const allConfirmed = computed(
-    () => sessions.value.length > 0 && sessions.value.every((session) => session.confirmed),
+    () => sessions.value.length > 0 && sessions.value.every(session => session.confirmed),
   )
 
   function replaceSession(next: ImportSession) {
-    const index = sessions.value.findIndex((session) => session.id === next.id)
+    const index = sessions.value.findIndex(session => session.id === next.id)
     if (index >= 0) {
       sessions.value[index] = next
-    } else {
+    }
+    else {
       sessions.value.push(next)
     }
     activeSessionId.value = next.id
@@ -73,9 +74,11 @@ export const useImportStore = defineStore('import', () => {
         const session = await analyzeDataExcel(path, template.id)
         replaceSession(session)
       }
-    } catch (error) {
+    }
+    catch (error) {
       errorMessage.value = asErrorMessage(error)
-    } finally {
+    }
+    finally {
       analyzingFiles.value = false
       analyzingLabel.value = ''
     }
@@ -108,7 +111,8 @@ export const useImportStore = defineStore('import', () => {
     mappingError.value = ''
     try {
       replaceSession(await updateImportHeaderRow(session.id, headerRow))
-    } catch (error) {
+    }
+    catch (error) {
       errorMessage.value = asErrorMessage(error)
     }
   }
@@ -122,7 +126,8 @@ export const useImportStore = defineStore('import', () => {
     mappingError.value = ''
     try {
       replaceSession(await updateImportSheet(session.id, sheetName))
-    } catch (error) {
+    }
+    catch (error) {
       errorMessage.value = asErrorMessage(error)
     }
   }
@@ -135,7 +140,8 @@ export const useImportStore = defineStore('import', () => {
     mappingError.value = ''
     try {
       replaceSession(await updateMapping(session.id, sourceColumnIndex, targetColumnIndex))
-    } catch (error) {
+    }
+    catch (error) {
       mappingError.value = asErrorMessage(error)
     }
   }
@@ -148,7 +154,8 @@ export const useImportStore = defineStore('import', () => {
     mappingError.value = ''
     try {
       replaceSession(await confirmMapping(session.id))
-    } catch (error) {
+    }
+    catch (error) {
       mappingError.value = asErrorMessage(error)
     }
   }
@@ -168,15 +175,17 @@ export const useImportStore = defineStore('import', () => {
     outputs.value = []
     try {
       outputs.value = await convertFiles(
-        sessions.value.map((session) => session.id),
+        sessions.value.map(session => session.id),
         outputDir,
       )
       convertSucceeded.value = true
-    } catch (error) {
+    }
+    catch (error) {
       const message = asErrorMessage(error)
       convertError.value = message
       errorMessage.value = message
-    } finally {
+    }
+    finally {
       converting.value = false
     }
   }

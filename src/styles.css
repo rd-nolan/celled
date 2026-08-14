@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-primary-50: #f7f7f7;
@@ -57,14 +57,12 @@
   --color-error-fg: #9b3a3a;
 
   --font-sans:
-    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
   --font-display:
-    "Berkeley Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --font-mono:
-    "Berkeley Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+    'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -110,15 +108,15 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: local("Inter Variable"), local("Inter");
+  src: local('Inter Variable'), local('Inter');
 }
 
 @font-face {
-  font-family: "Berkeley Mono";
+  font-family: 'Berkeley Mono';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: local("Berkeley Mono");
+  src: local('Berkeley Mono');
 }
 
 html,

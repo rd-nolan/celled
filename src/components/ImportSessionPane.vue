@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import type { ImportSession } from '@/types/import'
+import type { TemplateColumn } from '@/types/template'
 import ExcelPreview from '@/components/ExcelPreview.vue'
 import HeaderRowSelector from '@/components/HeaderRowSelector.vue'
 import MappingTable from '@/components/MappingTable.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import type { ImportSession } from '@/types/import'
-import type { TemplateColumn } from '@/types/template'
 
 defineProps<{
   session: ImportSession
@@ -29,7 +29,9 @@ function onSheetChange(event: Event) {
     <div class="shrink-0 border-b border-primary-200 px-5 py-3">
       <div class="flex items-center justify-between gap-4">
         <div class="min-w-0">
-          <div class="truncate text-sm font-medium text-primary-950">{{ session.file_name }}</div>
+          <div class="truncate text-sm font-medium text-primary-950">
+            {{ session.file_name }}
+          </div>
           <div class="mt-0.5 text-xs text-primary-500">
             数据起始行：第 {{ session.data_start_row }} 行
           </div>
@@ -64,10 +66,14 @@ function onSheetChange(event: Event) {
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto px-5 py-4">
-      <div class="mb-2 text-xs font-medium text-primary-500">Excel 预览</div>
+      <div class="mb-2 text-xs font-medium text-primary-500">
+        Excel 预览
+      </div>
       <ExcelPreview :preview="session.preview" />
 
-      <div class="mt-4 mb-2 text-xs font-medium text-primary-500">字段映射</div>
+      <div class="mt-4 mb-2 text-xs font-medium text-primary-500">
+        字段映射
+      </div>
       <p v-if="mappingError" class="mb-2 bg-error/10 px-3 py-2 text-sm text-error-fg">
         {{ mappingError }}
       </p>

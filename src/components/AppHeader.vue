@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import type { AppInfo } from '@/types/template'
 
+import { shallowRef } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { getAppInfo } from '@/services/tauri'
-import type { AppInfo } from '@/types/template'
 
 const aboutOpen = shallowRef(false)
 const info = shallowRef<AppInfo | null>(null)
@@ -12,7 +12,8 @@ async function openAbout() {
   aboutOpen.value = true
   try {
     info.value = await getAppInfo()
-  } catch {
+  }
+  catch {
     info.value = null
   }
 }
@@ -21,7 +22,9 @@ async function openAbout() {
 <template>
   <header class="flex h-12 shrink-0 items-center justify-between border-b border-primary-200 px-5">
     <span class="font-display text-[15px] font-semibold tracking-tight text-primary-950">Celled</span>
-    <BaseButton variant="ghost" size="sm" @click="openAbout">关于</BaseButton>
+    <BaseButton variant="ghost" size="sm" @click="openAbout">
+      关于
+    </BaseButton>
   </header>
 
   <div
@@ -30,7 +33,9 @@ async function openAbout() {
     @click.self="aboutOpen = false"
   >
     <div class="w-[360px] rounded-lg border border-primary-200 bg-white p-4 shadow-sm">
-      <div class="font-display text-sm font-medium text-primary-950">关于 Celled</div>
+      <div class="font-display text-sm font-medium text-primary-950">
+        关于 Celled
+      </div>
       <p class="mt-2 text-sm text-primary-600">
         本地 Excel 表头匹配与数据转换工具。文件与字段均在本机处理，不上传网络。
       </p>
@@ -45,7 +50,9 @@ async function openAbout() {
         </div>
       </dl>
       <div class="mt-4 flex justify-end">
-        <BaseButton size="sm" @click="aboutOpen = false">关闭</BaseButton>
+        <BaseButton size="sm" @click="aboutOpen = false">
+          关闭
+        </BaseButton>
       </div>
     </div>
   </div>

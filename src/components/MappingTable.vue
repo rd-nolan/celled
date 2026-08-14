@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
-import StatusBadge from '@/components/ui/StatusBadge.vue'
-import type { TemplateColumn } from '@/types/template'
 import type { HeaderMapping, MatchCandidate, SourceColumn } from '@/types/mapping'
+
+import type { TemplateColumn } from '@/types/template'
+import { computed } from 'vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
 
 const props = defineProps<{
   mappings: HeaderMapping[]
@@ -16,7 +16,7 @@ const emit = defineEmits<{
 }>()
 
 function samplesFor(index: number) {
-  return props.sourceColumns.find((column) => column.index === index)?.sample_values ?? []
+  return props.sourceColumns.find(column => column.index === index)?.sample_values ?? []
 }
 
 function selectedValue(mapping: HeaderMapping) {
@@ -24,8 +24,8 @@ function selectedValue(mapping: HeaderMapping) {
 }
 
 function otherOptions(mapping: HeaderMapping) {
-  const recommended = new Set(mapping.candidates.map((item) => item.template_column_index))
-  return props.templateColumns.filter((column) => !recommended.has(column.index))
+  const recommended = new Set(mapping.candidates.map(item => item.template_column_index))
+  return props.templateColumns.filter(column => !recommended.has(column.index))
 }
 
 function onChange(sourceColumnIndex: number, event: Event) {
@@ -55,11 +55,21 @@ const hasRows = computed(() => props.mappings.length > 0)
     <table class="min-w-full border-collapse text-sm">
       <thead class="sticky top-0 bg-primary-50">
         <tr>
-          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">数据字段</th>
-          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">数据示例</th>
-          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">模板字段</th>
-          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">匹配来源</th>
-          <th class="w-24 border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">相似度</th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">
+            数据字段
+          </th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">
+            数据示例
+          </th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">
+            模板字段
+          </th>
+          <th class="border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">
+            匹配来源
+          </th>
+          <th class="w-24 border-b border-primary-200 px-3 py-2 text-left font-medium text-primary-600">
+            相似度
+          </th>
         </tr>
       </thead>
       <tbody class="divide-y divide-primary-200">
@@ -79,7 +89,9 @@ const hasRows = computed(() => props.mappings.length > 0)
               :value="selectedValue(mapping)"
               @change="onChange(mapping.source_column_index, $event)"
             >
-              <option value="">不映射 / 忽略此列</option>
+              <option value="">
+                不映射 / 忽略此列
+              </option>
               <optgroup v-if="mapping.candidates.length > 0" label="推荐">
                 <option
                   v-for="candidate in mapping.candidates"
@@ -108,7 +120,9 @@ const hasRows = computed(() => props.mappings.length > 0)
           </td>
         </tr>
         <tr v-if="!hasRows">
-          <td colspan="5" class="px-3 py-8 text-center text-primary-500">暂无字段可映射</td>
+          <td colspan="5" class="px-3 py-8 text-center text-primary-500">
+            暂无字段可映射
+          </td>
         </tr>
       </tbody>
     </table>

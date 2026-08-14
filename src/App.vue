@@ -3,10 +3,10 @@ import { computed, shallowRef, watch } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSteps from '@/components/AppSteps.vue'
+import { useTemplateStore } from '@/stores/template'
 import ExportView from '@/views/ExportView.vue'
 import ImportView from '@/views/ImportView.vue'
 import TemplateView from '@/views/TemplateView.vue'
-import { useTemplateStore } from '@/stores/template'
 
 const currentStep = shallowRef(1)
 const templateStore = useTemplateStore()

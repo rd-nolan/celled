@@ -1,11 +1,11 @@
-export type MappingSource =
-  | 'exact'
-  | 'normalized_exact'
-  | 'history'
-  | 'alias'
-  | 'embedding'
-  | 'manual'
-  | 'unmatched'
+export type MappingSource
+  = | 'exact'
+    | 'normalized_exact'
+    | 'history'
+    | 'alias'
+    | 'embedding'
+    | 'manual'
+    | 'unmatched'
 
 export interface MatchCandidate {
   template_column_index: number

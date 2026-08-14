@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
 import type { ImportStatus } from '@/types/import'
+
 import type { MappingSource } from '@/types/mapping'
+import { computed } from 'vue'
 
 type BadgeKind = MappingSource | ImportStatus
 

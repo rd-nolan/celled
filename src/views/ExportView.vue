@@ -42,7 +42,9 @@ const nextTitle = computed(() => {
       <div v-if="convertSucceeded" class="mb-4 flex items-start gap-3 bg-success/10 px-3 py-3">
         <CircleCheck class="mt-0.5 h-5 w-5 shrink-0 text-success" />
         <div>
-          <div class="text-sm font-medium text-success-fg">转换完成</div>
+          <div class="text-sm font-medium text-success-fg">
+            转换完成
+          </div>
           <p class="mt-0.5 text-xs text-primary-600">
             已生成 {{ outputs.length }} 个文件
           </p>
@@ -52,7 +54,9 @@ const nextTitle = computed(() => {
       <div v-else-if="convertError" class="mb-4 flex items-start gap-3 bg-error/10 px-3 py-3">
         <CircleAlert class="mt-0.5 h-5 w-5 shrink-0 text-error" />
         <div>
-          <div class="text-sm font-medium text-error-fg">转换失败</div>
+          <div class="text-sm font-medium text-error-fg">
+            转换失败
+          </div>
           <p class="mt-0.5 text-sm text-error-fg">
             {{ convertError }}
           </p>
@@ -82,7 +86,9 @@ const nextTitle = computed(() => {
       </ul>
 
       <div v-if="outputs.length > 0" class="mt-6">
-        <div class="mb-2 text-xs font-medium text-primary-500">输出文件</div>
+        <div class="mb-2 text-xs font-medium text-primary-500">
+          输出文件
+        </div>
         <ul class="space-y-1 text-sm text-primary-800">
           <li v-for="file in outputs" :key="file.path" class="truncate" :title="file.path">
             {{ file.path }}

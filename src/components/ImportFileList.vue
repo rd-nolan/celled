@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Plus } from '@lucide/vue'
+import type { ImportSession } from '@/types/import'
 
+import { Plus } from '@lucide/vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
-import type { ImportSession } from '@/types/import'
 
 defineProps<{
   sessions: ImportSession[]
@@ -28,7 +28,9 @@ function statusKind(session: ImportSession) {
 <template>
   <aside class="flex w-64 shrink-0 flex-col overflow-hidden border-l border-primary-200">
     <div class="border-b border-primary-200 px-3 py-3">
-      <div class="text-sm font-medium text-primary-950">源数据文件</div>
+      <div class="text-sm font-medium text-primary-950">
+        源数据文件
+      </div>
       <div class="mt-1 text-xs text-primary-500">
         {{ sessions.length }} 个文件 · {{ confirmedCount }} 已确认
       </div>

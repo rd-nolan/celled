@@ -1,6 +1,7 @@
+import type { TemplateAnalysis, TemplateSchema } from '@/types/template'
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
 
+import { computed, ref, shallowRef } from 'vue'
 import {
   analyzeTemplate,
   asErrorMessage,
@@ -8,7 +9,6 @@ import {
   pickExcelFile,
   updateTemplateHeaderRow,
 } from '@/services/tauri'
-import type { TemplateAnalysis, TemplateSchema } from '@/types/template'
 
 export const useTemplateStore = defineStore('template', () => {
   const currentTemplate = ref<TemplateSchema | null>(null)
@@ -37,10 +37,12 @@ export const useTemplateStore = defineStore('template', () => {
     useImportStore().reset()
     try {
       templateAnalysis.value = await analyzeTemplate(path, sheetName)
-    } catch (error) {
+    }
+    catch (error) {
       templateAnalysis.value = null
       errorMessage.value = asErrorMessage(error)
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -70,9 +72,11 @@ export const useTemplateStore = defineStore('template', () => {
         analysis.sheet_name,
         headerRowValue,
       )
-    } catch (error) {
+    }
+    catch (error) {
       errorMessage.value = asErrorMessage(error)
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -99,11 +103,13 @@ export const useTemplateStore = defineStore('template', () => {
         headerRow: analysis.detection.row_index,
       })
       templateConfirmed.value = true
-    } catch (error) {
+    }
+    catch (error) {
       templateConfirmed.value = false
       currentTemplate.value = null
       errorMessage.value = asErrorMessage(error)
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }

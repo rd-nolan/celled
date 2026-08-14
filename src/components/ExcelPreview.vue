@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, useTemplateRef, watch } from 'vue'
-
 import type { ExcelPreview } from '@/types/template'
+
+import { computed, nextTick, useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   preview: ExcelPreview | null

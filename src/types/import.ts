@@ -1,5 +1,5 @@
-import type { ExcelPreview } from './template'
 import type { HeaderMapping, SourceColumn } from './mapping'
+import type { ExcelPreview } from './template'
 
 export type ImportStatus = 'pending' | 'confirmed' | 'error'
 
