@@ -1,3 +1,4 @@
+#[cfg(test)]
 pub mod fixtures;
 pub mod header_detector;
 pub mod preview;
@@ -5,7 +6,6 @@ pub mod reader;
 pub mod transformer;
 pub mod writer;
 
-pub use fixtures::write_demo_fixtures;
 pub use header_detector::*;
 pub use preview::*;
 pub use reader::*;

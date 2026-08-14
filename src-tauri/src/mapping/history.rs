@@ -11,11 +11,13 @@ pub trait HistoryLookup: Send + Sync {
     fn find(&self, normalized_source: &str) -> Option<HistoryHit>;
 }
 
+#[cfg(test)]
 #[derive(Debug, Default)]
 pub struct MemoryHistory {
     pub hits: Vec<(String, HistoryHit)>,
 }
 
+#[cfg(test)]
 impl HistoryLookup for MemoryHistory {
     fn find(&self, normalized_source: &str) -> Option<HistoryHit> {
         self.hits
@@ -30,6 +32,9 @@ pub fn history_candidate(
     template_columns: &[(usize, String, String)],
     hit: &HistoryHit,
 ) -> Option<MatchCandidate> {
+    if hit.usage_count < 1 {
+        return None;
+    }
     template_columns.iter().find_map(|(idx, name, normalized)| {
         if normalized == &hit.normalized_target_header || name == &hit.target_header {
             Some(MatchCandidate {
