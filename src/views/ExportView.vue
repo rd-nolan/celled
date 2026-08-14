@@ -17,7 +17,7 @@ const {
   confirmedCount,
   allConfirmed,
   converting,
-  outputs,
+  mergedOutput,
   errorMessage,
   convertSucceeded,
   convertError,
@@ -34,6 +34,15 @@ const nextTitle = computed(() => {
   }
   return '请先确认每个数据文件的映射'
 })
+const convertHint = computed(() => {
+  if (!allConfirmed.value) {
+    return nextTitle.value
+  }
+  if (convertSucceeded.value) {
+    return '可再次选择保存位置并转换'
+  }
+  return '将按模板表头合并为一个 Excel 文件'
+})
 </script>
 
 <template>
@@ -46,7 +55,7 @@ const nextTitle = computed(() => {
             转换完成
           </div>
           <p class="mt-0.5 text-xs text-primary-600">
-            已生成 {{ outputs.length }} 个文件
+            已按模板表头，将所有确认文件的数据合并到一个 Excel 文件
           </p>
         </div>
       </div>
@@ -85,15 +94,13 @@ const nextTitle = computed(() => {
         </li>
       </ul>
 
-      <div v-if="outputs.length > 0" class="mt-6">
+      <div v-if="mergedOutput" class="mt-6">
         <div class="mb-2 text-xs font-medium text-primary-500">
           输出文件
         </div>
-        <ul class="space-y-1 text-sm text-primary-800">
-          <li v-for="file in outputs" :key="file.path" class="truncate" :title="file.path">
-            {{ file.path }}
-          </li>
-        </ul>
+        <p class="truncate text-sm text-primary-800" :title="mergedOutput.path">
+          {{ mergedOutput.path }}
+        </p>
       </div>
     </div>
 
@@ -105,7 +112,7 @@ const nextTitle = computed(() => {
       @prev="emit('prev')"
       @next="importStore.startConvert"
     >
-      {{ allConfirmed ? (convertSucceeded ? '可再次选择输出目录并转换' : '可以开始转换') : nextTitle }}
+      {{ convertHint }}
     </StepNav>
   </div>
 </template>

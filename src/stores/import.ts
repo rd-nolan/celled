@@ -7,8 +7,9 @@ import {
   asErrorMessage,
   confirmMapping,
   convertFiles,
-  pickDirectory,
+  mergedOutputFileName,
   pickExcelFiles,
+  pickSavePath,
   updateImportHeaderRow,
   updateImportSheet,
   updateMapping,
@@ -34,6 +35,7 @@ export const useImportStore = defineStore('import', () => {
   const allConfirmed = computed(
     () => sessions.value.length > 0 && sessions.value.every(session => session.confirmed),
   )
+  const mergedOutput = computed(() => outputs.value[0] ?? null)
 
   function replaceSession(next: ImportSession) {
     const index = sessions.value.findIndex(session => session.id === next.id)
@@ -164,8 +166,9 @@ export const useImportStore = defineStore('import', () => {
     if (!allConfirmed.value) {
       return
     }
-    const outputDir = await pickDirectory()
-    if (!outputDir) {
+    const defaultName = mergedOutputFileName(useTemplateStore().currentTemplate?.file_name)
+    const outputPath = await pickSavePath(defaultName)
+    if (!outputPath) {
       return
     }
     converting.value = true
@@ -176,7 +179,7 @@ export const useImportStore = defineStore('import', () => {
     try {
       outputs.value = await convertFiles(
         sessions.value.map(session => session.id),
-        outputDir,
+        outputPath,
       )
       convertSucceeded.value = true
     }
@@ -214,6 +217,7 @@ export const useImportStore = defineStore('import', () => {
     convertError,
     confirmedCount,
     allConfirmed,
+    mergedOutput,
     setError,
     addFilesFromPaths,
     addFiles,

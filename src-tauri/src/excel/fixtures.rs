@@ -53,7 +53,7 @@ pub fn write_demo_fixtures(dir: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-fn write_simple(path: &Path, sheet_name: &str, rows: &[&[&str]]) -> Result<(), AppError> {
+pub fn write_simple(path: &Path, sheet_name: &str, rows: &[&[&str]]) -> Result<(), AppError> {
     let mut workbook = Workbook::new();
     let worksheet = workbook
         .add_worksheet()

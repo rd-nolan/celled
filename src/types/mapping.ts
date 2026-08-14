@@ -4,6 +4,7 @@ export type MappingSource
     | 'history'
     | 'alias'
     | 'embedding'
+    | 'content'
     | 'manual'
     | 'unmatched'
 

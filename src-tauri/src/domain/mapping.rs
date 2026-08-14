@@ -8,6 +8,7 @@ pub enum MappingSource {
     History,
     Alias,
     Embedding,
+    Content,
     Manual,
     Unmatched,
 }

@@ -133,13 +133,21 @@ export function confirmMapping(sessionId: string) {
   })
 }
 
-export function convertFiles(sessionIds: string[], outputDir: string) {
+export function convertFiles(sessionIds: string[], outputPath: string) {
   return invoke<OutputFile[]>('convert_files', {
     request: {
       session_ids: sessionIds,
-      output_dir: outputDir,
+      output_path: outputPath,
     },
   })
+}
+
+export function mergedOutputFileName(templateFileName?: string | null): string {
+  const base = templateFileName?.replace(/\.[^.]+$/, '').trim()
+  if (!base) {
+    return 'Celled_合并.xlsx'
+  }
+  return `${base}_合并.xlsx`
 }
 
 export function getAppInfo() {

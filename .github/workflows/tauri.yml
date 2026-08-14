@@ -36,6 +36,8 @@ jobs:
           - platform: macos-14
             target: aarch64-apple-darwin
             name: macos-aarch64
+            # tauri build --target writes under target/<triple>/, not target/release/.
+            artifact_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           - platform: windows-latest
             # Always x86_64 (HostX64/x64). Do not add ARM64 ort binaries or extra --target.
             # Artifact is NSIS only (no MSI). WiX 3 light.exe often cannot run on
@@ -44,11 +46,16 @@ jobs:
             # at process create, before UI), dump PE IAT. CANNOT: GUI clicking / visual QA.
             target: x86_64-pc-windows-msvc
             name: windows-x64
+            artifact_path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           # ubuntu-24.04: pykeio ort's prebuilt ONNX Runtime needs glibc 2.38+
           # (__isoc23_*) and GCC 13+ libstdc++ (_M_replace_cold). 22.04 cannot link.
           - platform: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             name: linux-x64
+            artifact_path: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 90
@@ -110,10 +117,13 @@ jobs:
           # Windows: NSIS only (bundle.targets omits msi). WiX 3 light.exe often
           # cannot run on windows-2025 (missing .NET 3.5 / light.exe 0xc000007b).
           args: --target ${{ matrix.target }}
-          # Do not publish from the matrix: a failed platform (or a draft release)
-          # would hide installers from the tag page. The `release` job attaches
-          # whatever platforms succeeded.
-          includeRelease: false
+          # Release *build* (default true). Never set includeRelease: false — that
+          # skips pnpm tauri build entirely (debug+release both off → no exe/bundles),
+          # it does not mean "skip GitHub Releases". GH upload is the `release` job.
+          includeRelease: true
+          # Do not pass tagName here: a failed platform (or a draft release) would
+          # hide installers from the tag page. The `release` job attaches whatever
+          # platforms succeeded.
 
       # Default tauri build does not pass --features onnx; fail if the IAT still
       # names DirectML / ONNX Runtime (the 0xc000007b class of missing-DLL load).
@@ -124,21 +134,47 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $exe = $null
+          $appNames = @('celld.exe', 'Celled.exe')
           $releaseRoot = Join-Path $pwd "src-tauri/target/${{ matrix.target }}/release"
-          foreach ($name in @('celld.exe', 'Celled.exe')) {
+          $targetDir = Join-Path $pwd "src-tauri/target/${{ matrix.target }}"
+
+          # Primary: cargo/tauri unsigned binary after a real `tauri build --release`.
+          foreach ($name in $appNames) {
             $candidate = Join-Path $releaseRoot $name
             if (Test-Path -LiteralPath $candidate) {
               $exe = $candidate
               break
             }
           }
-          if (-not $exe) {
+
+          # Fallback: recurse release/ including bundle/nsis/. Match the app exe only.
+          # NSIS installer is e.g. Celled_*_x64-setup.exe — never launch that as the app.
+          if (-not $exe -and (Test-Path -LiteralPath $releaseRoot)) {
             $exe = Get-ChildItem -LiteralPath $releaseRoot -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue |
-              Where-Object { $_.Name -match '^(celld|Celled)\.exe$' -and $_.FullName -notmatch '[\\/]bundle[\\/]' } |
+              Where-Object {
+                $appNames -contains $_.Name -and $_.Name -notmatch '(?i)-setup\.exe$'
+              } |
               Select-Object -ExpandProperty FullName -First 1
           }
+
           if (-not $exe) {
-            throw "Could not find celld.exe / Celled.exe under $releaseRoot (excluding bundle/)"
+            Write-Host "tauri build did not produce celld.exe / Celled.exe."
+            Write-Host "Expected: $releaseRoot\celld.exe (or Celled.exe) after a release tauri build."
+            Write-Host "If includeRelease is false on tauri-action@v0, the release build is skipped and this directory is empty."
+            $dumpRoot = if (Test-Path -LiteralPath $targetDir) { $targetDir } else { Join-Path $pwd 'src-tauri/target' }
+            Write-Host "Listing *.exe under $dumpRoot (max 40):"
+            if (Test-Path -LiteralPath $dumpRoot) {
+              $found = @(Get-ChildItem -LiteralPath $dumpRoot -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 40 -ExpandProperty FullName)
+              if ($found.Count -eq 0) {
+                Write-Host '(no .exe files)'
+              } else {
+                $found | ForEach-Object { Write-Host $_ }
+              }
+            } else {
+              Write-Host "(directory does not exist: $dumpRoot)"
+            }
+            throw "tauri build did not produce celld.exe / Celled.exe under $releaseRoot (including bundle/nsis/). Do not launch NSIS *-setup.exe as the app."
           }
           Write-Host "App exe: $exe"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$exe"
@@ -223,14 +259,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: celld-${{ matrix.name }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz
-            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
-            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
-            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+          # Per-OS globs only. Listing dmg+nsis+deb on every runner makes
+          # upload-artifact@v7 LCA-search the empty union and error.
+          path: ${{ matrix.artifact_path }}
           if-no-files-found: error
           compression-level: 0
 

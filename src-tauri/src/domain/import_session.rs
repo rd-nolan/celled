@@ -30,7 +30,7 @@ pub struct ImportSession {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConvertRequest {
     pub session_ids: Vec<String>,
-    pub output_dir: String,
+    pub output_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

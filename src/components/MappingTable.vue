@@ -33,15 +33,19 @@ function onChange(sourceColumnIndex: number, event: Event) {
   emit('change', sourceColumnIndex, raw === '' ? null : Number(raw))
 }
 
+function showsSimilarity(source: HeaderMapping['source']) {
+  return source === 'embedding' || source === 'content'
+}
+
 function similarityText(mapping: HeaderMapping) {
-  if (mapping.source !== 'embedding' || mapping.score === null) {
+  if (!showsSimilarity(mapping.source) || mapping.score === null) {
     return '—'
   }
   return `${Math.round(mapping.score * 100)}%`
 }
 
 function candidateLabel(mapping: HeaderMapping, candidate: MatchCandidate) {
-  if (mapping.source === 'embedding') {
+  if (showsSimilarity(mapping.source)) {
     return `${candidate.template_header} ${Math.round(candidate.score * 100)}%`
   }
   return candidate.template_header
