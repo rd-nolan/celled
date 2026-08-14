@@ -34,12 +34,25 @@ chrono = { version = "0.4", default-features = false, features = [
   "clock",
   "std"
 ] }
-ort = "=2.0.0-rc.13"
+# ONNX is opt-in. Default V1 builds have no model.onnx; linking ort's
+# download-binaries (static ORT + DirectML/MSVCP140 IAT) made Windows
+# fail at process start with 0xc000007b before the mock fallback ran.
+# Enable with: cargo build --features onnx
+# load-dynamic: missing/wrong onnxruntime.dll → runtime error, not STATUS_INVALID_IMAGE_FORMAT.
+ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = [
+  "std",
+  "load-dynamic",
+  "api-27"
+] }
 # Drop esaxx_fast: its C++ (esaxx-rs) builds with static CRT /MT on MSVC, which
 # cannot link against ort's prebuilt ONNX Runtime (/MD). WordPiece for
 # bge-small-zh-v1.5 does not need the Unigram suffix-array path; onig stays
 # for BERT regex pre-tokenization.
 tokenizers = { version = "0.21", default-features = false, features = ["onig"] }
+
+[features]
+default = []
+onnx = ["dep:ort"]
 
 [dev-dependencies]
 tempfile = "3"

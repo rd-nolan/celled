@@ -29,6 +29,10 @@ impl OnnxEmbeddingProvider {
             ));
         }
 
+        // load-dynamic: ORT is opened here, not via PE imports. Wrong/missing DLL
+        // becomes ModelLoadFailed (mock fallback) instead of 0xc000007b at process start.
+        init_onnx_runtime()?;
+
         let session = ort::session::Session::builder()
             .map_err(|e| AppError::ModelLoadFailed(e.to_string()))?
             .with_optimization_level(ort::session::builder::GraphOptimizationLevel::Level3)
@@ -82,6 +86,30 @@ impl OnnxEmbeddingProvider {
             input_names,
             output_name,
         })
+    }
+}
+
+fn init_onnx_runtime() -> Result<(), AppError> {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let dylib = dir.join(onnx_dylib_name());
+            if dylib.exists() {
+                ort::init_from(&dylib)
+                    .map_err(|e| AppError::ModelLoadFailed(e.to_string()))?
+                    .commit();
+            }
+        }
+    }
+    Ok(())
+}
+
+fn onnx_dylib_name() -> &'static str {
+    if cfg!(windows) {
+        "onnxruntime.dll"
+    } else if cfg!(target_os = "macos") {
+        "libonnxruntime.dylib"
+    } else {
+        "libonnxruntime.so"
     }
 }
 

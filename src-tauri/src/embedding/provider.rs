@@ -42,20 +42,25 @@ pub fn l2_normalize(vector: &mut [f32]) {
 }
 
 pub fn create_provider(model_dir: Option<&Path>) -> Arc<dyn EmbeddingProvider> {
-    if let Some(dir) = model_dir {
-        match crate::embedding::OnnxEmbeddingProvider::load(dir) {
-            Ok(provider) => return Arc::new(provider),
-            Err(err) => {
-                eprintln!("ONNX embedding unavailable ({err}), falling back to mock provider");
+    #[cfg(feature = "onnx")]
+    {
+        if let Some(dir) = model_dir {
+            match crate::embedding::OnnxEmbeddingProvider::load(dir) {
+                Ok(provider) => return Arc::new(provider),
+                Err(err) => {
+                    eprintln!("ONNX embedding unavailable ({err}), falling back to mock provider");
+                }
             }
         }
     }
+    #[cfg(not(feature = "onnx"))]
+    let _ = model_dir;
     Arc::new(crate::embedding::MockEmbeddingProvider::default())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::cosine_similarity;
+    use super::{cosine_similarity, create_provider, EmbeddingProvider};
 
     #[test]
     fn cosine_of_identical_vectors_is_one() {
@@ -68,5 +73,11 @@ mod tests {
         let a = vec![1.0, 0.0];
         let b = vec![0.0, 1.0];
         assert!(cosine_similarity(&a, &b).abs() < 1e-6);
+    }
+
+    #[test]
+    fn missing_model_uses_mock_backend() {
+        let provider = create_provider(None);
+        assert_eq!(provider.backend_name(), "mock");
     }
 }

@@ -41,3 +41,9 @@ npm run tauri dev
 ```
 
 未提供 `model.onnx` 时，Embedding 会回退到本地 mock，应用仍可运行。
+
+## Windows 安装
+
+请安装 CI 产物里的 **`Celled_*_x64-setup.exe`（NSIS）或 `Celled_*_x64_*.msi`**，不要单独拷贝 `celld.exe`。
+
+当前默认构建不含 ONNX Runtime（仓库里没有 `model.onnx`）。安装后即可打开应用，界面里 Embedding 后端为 `mock`。旧安装包把 DirectML / MSVCP140 写进了 exe 的导入表却没随安装包分发，会在启动时报 `0xc000007b`。需要重新打一次 `tauri build` / CI 包。
