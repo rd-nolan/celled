@@ -7,6 +7,7 @@ import { isExcelPath } from '@/services/tauri'
 
 const INVALID_TYPE_MESSAGE = '仅支持 Excel 文件（.xlsx / .xls / .xlsm）'
 const DEFAULT_MISSING_PATH_MESSAGE = '无法读取文件路径，请点击选择文件'
+const DROP_DEDUP_MS = 500
 
 interface FileWithPath extends File {
   path?: string
@@ -21,6 +22,8 @@ export function useExcelFileDrop(options: {
   const isOver = shallowRef(false)
   const isValid = shallowRef(false)
   let dropping = false
+  let lastDropKey = ''
+  let lastDropAt = 0
 
   function resetHover() {
     isOver.value = false
@@ -41,6 +44,13 @@ export function useExcelFileDrop(options: {
       options.onInvalid?.(INVALID_TYPE_MESSAGE)
       return
     }
+    const key = excelPaths.join('|')
+    const now = Date.now()
+    if (key === lastDropKey && now - lastDropAt < DROP_DEDUP_MS) {
+      return
+    }
+    lastDropKey = key
+    lastDropAt = now
     dropping = true
     const task = options.onDropMany
       ? options.onDropMany(excelPaths)
@@ -102,8 +112,11 @@ export function useExcelFileDrop(options: {
 
   function onDrop(event: DragEvent) {
     event.preventDefault()
-    const data = event.dataTransfer
     resetHover()
+    if (isTauri()) {
+      return
+    }
+    const data = event.dataTransfer
     const paths = pathsFromDataTransfer(data)
     if (paths.length > 0) {
       emitPaths(paths)
