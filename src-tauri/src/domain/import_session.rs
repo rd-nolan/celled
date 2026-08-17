@@ -25,6 +25,7 @@ pub struct ImportSession {
     pub confirmed: bool,
     pub status: ImportStatus,
     pub error: Option<String>,
+    pub read_filtered_only: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

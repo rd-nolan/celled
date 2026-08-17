@@ -20,11 +20,19 @@ pub async fn analyze_data_excel(
     path: String,
     template_id: String,
     sheet_name: Option<String>,
+    read_filtered_only: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<ImportSession, AppError> {
     let state = state.inner().clone();
+    let read_filtered_only = read_filtered_only.unwrap_or(true);
     tauri::async_runtime::spawn_blocking(move || {
-        analyze_data_excel_inner(&path, &template_id, sheet_name.as_deref(), &state)
+        analyze_data_excel_inner(
+            &path,
+            &template_id,
+            sheet_name.as_deref(),
+            read_filtered_only,
+            &state,
+        )
     })
     .await
     .map_err(|e| AppError::Internal(e.to_string()))?
@@ -34,11 +42,12 @@ pub async fn analyze_data_excel(
 pub async fn update_import_header_row(
     session_id: String,
     header_row: usize,
+    read_filtered_only: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<ImportSession, AppError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        update_import_header_row_inner(&session_id, header_row, None, &state)
+        update_import_header_row_inner(&session_id, header_row, None, read_filtered_only, &state)
     })
     .await
     .map_err(|e| AppError::Internal(e.to_string()))?
@@ -48,11 +57,18 @@ pub async fn update_import_header_row(
 pub async fn update_import_sheet(
     session_id: String,
     sheet_name: String,
+    read_filtered_only: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<ImportSession, AppError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        update_import_header_row_inner(&session_id, 0, Some(sheet_name), &state)
+        update_import_header_row_inner(
+            &session_id,
+            0,
+            Some(sheet_name),
+            read_filtered_only,
+            &state,
+        )
     })
     .await
     .map_err(|e| AppError::Internal(e.to_string()))?
@@ -80,10 +96,22 @@ pub async fn confirm_mapping(
         .map_err(|e| AppError::Internal(e.to_string()))?
 }
 
+#[tauri::command]
+pub async fn remove_import_session(
+    session_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || remove_import_session_inner(&session_id, &state))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+}
+
 fn analyze_data_excel_inner(
     path: &str,
     template_id: &str,
     sheet_name: Option<&str>,
+    read_filtered_only: bool,
     state: &AppState,
 ) -> Result<ImportSession, AppError> {
     let template = require_template(state)?;
@@ -96,14 +124,20 @@ fn analyze_data_excel_inner(
         Some(name) if sheets.iter().any(|s| s == name) => name.to_string(),
         _ => ExcelReader::first_non_empty_sheet(path)?,
     };
-    let data = ExcelReader::read_sheet(path, &sheet_name, Some(PREVIEW_ROWS))?;
-    let detection = HeaderDetector::detect(&data.rows);
+    let data = ExcelReader::read_sheet(
+        path,
+        &sheet_name,
+        Some(PREVIEW_ROWS),
+        read_filtered_only,
+    )?;
+    let detection = HeaderDetector::detect(&data.rows, Some(&data), read_filtered_only);
     let session = build_session(
         Uuid::new_v4().to_string(),
         path,
         sheets,
         sheet_name,
         detection.row_index,
+        read_filtered_only,
         state,
         &template,
         &data,
@@ -118,6 +152,7 @@ fn update_import_header_row_inner(
     session_id: &str,
     header_row: usize,
     sheet_name: Option<String>,
+    read_filtered_only: Option<bool>,
     state: &AppState,
 ) -> Result<ImportSession, AppError> {
     let template = require_template(state)?;
@@ -131,12 +166,18 @@ fn update_import_header_row_inner(
             .cloned()
             .ok_or(AppError::SessionNotFound)?
     };
+    let read_filtered_only = read_filtered_only.unwrap_or(existing.read_filtered_only);
     let path = Path::new(&existing.file_path);
     let sheets = ExcelReader::list_sheets(path)?;
     let sheet_name = sheet_name.unwrap_or(existing.sheet_name);
-    let data = ExcelReader::read_sheet(path, &sheet_name, Some(PREVIEW_ROWS))?;
+    let data = ExcelReader::read_sheet(
+        path,
+        &sheet_name,
+        Some(PREVIEW_ROWS),
+        read_filtered_only,
+    )?;
     let header_row = if header_row == 0 {
-        HeaderDetector::detect(&data.rows).row_index
+        HeaderDetector::detect(&data.rows, Some(&data), read_filtered_only).row_index
     } else {
         header_row
     };
@@ -146,6 +187,7 @@ fn update_import_header_row_inner(
         sheets,
         sheet_name,
         header_row,
+        read_filtered_only,
         state,
         &template,
         &data,
@@ -162,11 +204,12 @@ fn build_session(
     sheets: Vec<String>,
     sheet_name: String,
     header_row: usize,
+    read_filtered_only: bool,
     state: &AppState,
     template: &crate::domain::TemplateSchema,
     data: &crate::excel::SheetData,
 ) -> Result<ImportSession, AppError> {
-    let headers = headers_at(data, header_row)?;
+    let headers = headers_at(data, header_row, read_filtered_only)?;
     if headers.iter().all(|h| h.trim().is_empty()) {
         return Err(AppError::InvalidHeaderRow);
     }
@@ -179,7 +222,7 @@ fn build_session(
             index,
             header: name.clone(),
             normalized_header: normalize_header(name),
-            sample_values: sample_values(data, data_start_row, index, 5),
+            sample_values: sample_values(data, data_start_row, index, 5, read_filtered_only),
         })
         .collect();
 
@@ -203,10 +246,11 @@ fn build_session(
         data_start_row,
         source_columns,
         mappings,
-        preview: build_preview(data, header_row),
+        preview: build_preview(data, header_row, read_filtered_only),
         confirmed: false,
         status: ImportStatus::Pending,
         error: None,
+        read_filtered_only,
     })
 }
 
@@ -261,6 +305,17 @@ fn update_mapping_inner(
     session.confirmed = false;
     session.status = ImportStatus::Pending;
     Ok(session.clone())
+}
+
+fn remove_import_session_inner(session_id: &str, state: &AppState) -> Result<(), AppError> {
+    let mut sessions = state
+        .sessions
+        .lock()
+        .map_err(|_| AppError::Internal("sessions lock poisoned".into()))?;
+    sessions
+        .remove(session_id)
+        .ok_or(AppError::SessionNotFound)?;
+    Ok(())
 }
 
 fn confirm_mapping_inner(

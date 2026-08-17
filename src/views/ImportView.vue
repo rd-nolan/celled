@@ -27,6 +27,7 @@ const {
   allConfirmed,
   mappingError,
   errorMessage,
+  warningMessage,
 } = storeToRefs(importStore)
 const { currentTemplate } = storeToRefs(templateStore)
 
@@ -72,6 +73,9 @@ const nextTitle = computed(() => {
         <div v-if="errorMessage" class="border-b border-error/20 bg-error/10 px-5 py-2 text-sm text-error-fg">
           {{ errorMessage }}
         </div>
+        <div v-if="warningMessage" class="border-b border-warning/20 bg-warning/10 px-5 py-2 text-sm text-warning-fg">
+          {{ warningMessage }}
+        </div>
         <div v-if="analyzingFiles" class="border-b border-primary-200 bg-primary-50 px-5 py-2 text-xs text-primary-500">
           正在分析 {{ analyzingLabel }} …
         </div>
@@ -108,6 +112,7 @@ const nextTitle = computed(() => {
         :analyzing="analyzingFiles"
         @select="importStore.selectSession"
         @add="importStore.addFiles"
+        @remove="importStore.removeSession"
       />
     </div>
 

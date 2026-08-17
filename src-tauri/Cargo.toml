@@ -48,11 +48,13 @@ ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, fea
 # cannot link against ort's prebuilt ONNX Runtime (/MD). WordPiece for
 # bge-small-zh-v1.5 does not need the Unigram suffix-array path; onig stays
 # for BERT regex pre-tokenization.
-tokenizers = { version = "0.21", default-features = false, features = ["onig"] }
+tokenizers = { version = "0.21", default-features = false, features = [ "onig" ] }
+quick-xml = "0.37"
+zip = "2"
 
 [features]
 default = []
-onnx = ["dep:ort"]
+onnx = [ "dep:ort" ]
 
 [dev-dependencies]
 tempfile = "3"

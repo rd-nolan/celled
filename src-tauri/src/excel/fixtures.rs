@@ -99,8 +99,8 @@ mod tests {
         for (name, expected) in cases {
             let path = dir.path().join(name);
             let sheet = ExcelReader::first_non_empty_sheet(&path).unwrap();
-            let data = ExcelReader::read_sheet(&path, &sheet, Some(16)).unwrap();
-            let detected = HeaderDetector::detect(&data.rows);
+            let data = ExcelReader::read_sheet(&path, &sheet, Some(16), false).unwrap();
+            let detected = HeaderDetector::detect(&data.rows, Some(&data), false);
             assert_eq!(detected.row_index, expected, "{name}");
         }
     }

@@ -7,7 +7,7 @@ use crate::app_state::AppState;
 use crate::commands::template::require_template;
 use crate::domain::{ConvertRequest, ImportSession, OutputFile};
 use crate::error::AppError;
-use crate::excel::{ExcelReader, ExcelTransformer, ExcelWriter};
+use crate::excel::{ExcelReader, ExcelTransformer, ExcelWriter, visible_data_rows};
 
 #[tauri::command]
 pub async fn convert_files(
@@ -46,14 +46,13 @@ fn convert_files_inner(
     let mut merged_rows = Vec::new();
     for id in &request.session_ids {
         let session = sessions.get(id).ok_or(AppError::SessionNotFound)?;
-        let data =
-            ExcelReader::read_sheet(Path::new(&session.file_path), &session.sheet_name, None)?;
-        let start = session.data_start_row.saturating_sub(1);
-        let source_rows = if start < data.rows.len() {
-            data.rows[start..].to_vec()
-        } else {
-            Vec::new()
-        };
+        let data = ExcelReader::read_sheet(
+            Path::new(&session.file_path),
+            &session.sheet_name,
+            None,
+            session.read_filtered_only,
+        )?;
+        let source_rows = visible_data_rows(&data, session.data_start_row, session.read_filtered_only);
         let label = source_label(session, &name_counts);
         let transformed =
             ExcelTransformer::transform(&source_rows, &session.mappings, &output_template, &label);
@@ -236,6 +235,7 @@ mod tests {
             confirmed: true,
             status: ImportStatus::Confirmed,
             error: None,
+            read_filtered_only: false,
         };
         let session_b = ImportSession {
             id: "b".into(),
@@ -255,6 +255,7 @@ mod tests {
             confirmed: true,
             status: ImportStatus::Confirmed,
             error: None,
+            read_filtered_only: false,
         };
 
         let state = AppState::new(
@@ -283,7 +284,7 @@ mod tests {
         assert_eq!(outputs[0].file_name, "out.xlsx");
         assert!(output_path.exists());
 
-        let data = ExcelReader::read_sheet(&output_path, "汇总", None).unwrap();
+        let data = ExcelReader::read_sheet(&output_path, "汇总", None, false).unwrap();
         assert_eq!(data.rows[0], vec!["姓名", "学号", "班级", "来源"]);
         assert_eq!(data.rows[1], vec!["张三", "A001", "", "source-a.xlsx"]);
         assert_eq!(data.rows[2], vec!["李四", "B002", "", "source-b.xlsx"]);

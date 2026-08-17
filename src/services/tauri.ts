@@ -91,25 +91,41 @@ export function confirmTemplate(payload: {
   })
 }
 
-export function analyzeDataExcel(path: string, templateId: string, sheetName?: string) {
+export function analyzeDataExcel(
+  path: string,
+  templateId: string,
+  sheetName?: string,
+  readFilteredOnly = true,
+) {
   return invoke<ImportSession>('analyze_data_excel', {
     path,
     templateId,
     sheetName: sheetName ?? null,
+    readFilteredOnly,
   })
 }
 
-export function updateImportHeaderRow(sessionId: string, headerRow: number) {
+export function updateImportHeaderRow(
+  sessionId: string,
+  headerRow: number,
+  readFilteredOnly?: boolean,
+) {
   return invoke<ImportSession>('update_import_header_row', {
     sessionId,
     headerRow,
+    readFilteredOnly: readFilteredOnly ?? null,
   })
 }
 
-export function updateImportSheet(sessionId: string, sheetName: string) {
+export function updateImportSheet(
+  sessionId: string,
+  sheetName: string,
+  readFilteredOnly?: boolean,
+) {
   return invoke<ImportSession>('update_import_sheet', {
     sessionId,
     sheetName,
+    readFilteredOnly: readFilteredOnly ?? null,
   })
 }
 
@@ -131,6 +147,10 @@ export function confirmMapping(sessionId: string) {
   return invoke<ImportSession>('confirm_mapping', {
     request: { session_id: sessionId },
   })
+}
+
+export function removeImportSession(sessionId: string) {
+  return invoke<void>('remove_import_session', { sessionId })
 }
 
 export function convertFiles(sessionIds: string[], outputPath: string) {

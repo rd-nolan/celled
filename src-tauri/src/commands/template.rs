@@ -75,7 +75,7 @@ fn analyze_template_inner(
         Some(name) if sheets.iter().any(|s| s == name) => name.to_string(),
         _ => ExcelReader::first_non_empty_sheet(path)?,
     };
-    let data = ExcelReader::read_sheet(path, &sheet_name, Some(PREVIEW_ROWS))?;
+    let data = ExcelReader::read_sheet(path, &sheet_name, Some(PREVIEW_ROWS), false)?;
     if data
         .rows
         .iter()
@@ -83,8 +83,8 @@ fn analyze_template_inner(
     {
         return Err(AppError::EmptyWorksheet);
     }
-    let detection = HeaderDetector::detect(&data.rows);
-    let preview = build_preview(&data, detection.row_index);
+    let detection = HeaderDetector::detect(&data.rows, Some(&data), false);
+    let preview = build_preview(&data, detection.row_index, false);
     Ok(TemplateAnalysis {
         file_path: path.to_string_lossy().to_string(),
         file_name: ExcelReader::file_name(path),
@@ -102,8 +102,8 @@ fn update_header_row_inner(
 ) -> Result<TemplateAnalysis, AppError> {
     let path = Path::new(path);
     let sheets = ExcelReader::list_sheets(path)?;
-    let data = ExcelReader::read_sheet(path, sheet_name, Some(PREVIEW_ROWS))?;
-    let headers = headers_at(&data, header_row)?;
+    let data = ExcelReader::read_sheet(path, sheet_name, Some(PREVIEW_ROWS), false)?;
+    let headers = headers_at(&data, header_row, false)?;
     if headers.iter().all(|h| h.trim().is_empty()) {
         return Err(AppError::InvalidHeaderRow);
     }
@@ -118,7 +118,7 @@ fn update_header_row_inner(
         sheets,
         sheet_name: sheet_name.to_string(),
         detection,
-        preview: build_preview(&data, header_row),
+        preview: build_preview(&data, header_row, false),
     })
 }
 
@@ -127,8 +127,8 @@ fn confirm_template_inner(
     state: &AppState,
 ) -> Result<TemplateSchema, AppError> {
     let path = Path::new(&request.file_path);
-    let data = ExcelReader::read_sheet(path, &request.sheet_name, Some(PREVIEW_ROWS))?;
-    let headers = headers_at(&data, request.header_row)?;
+    let data = ExcelReader::read_sheet(path, &request.sheet_name, Some(PREVIEW_ROWS), false)?;
+    let headers = headers_at(&data, request.header_row, false)?;
     if headers.iter().all(|h| h.trim().is_empty()) {
         return Err(AppError::InvalidHeaderRow);
     }

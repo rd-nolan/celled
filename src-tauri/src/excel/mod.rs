@@ -3,6 +3,7 @@ pub mod fixtures;
 pub mod header_detector;
 pub mod preview;
 pub mod reader;
+pub mod visibility;
 pub mod transformer;
 pub mod writer;
 

@@ -45,6 +45,7 @@ pub fn run() {
             commands::update_import_sheet,
             commands::update_mapping,
             commands::confirm_mapping,
+            commands::remove_import_session,
             commands::convert_files,
         ])
         .run(tauri::generate_context!())

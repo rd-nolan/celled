@@ -17,6 +17,7 @@ export interface ImportSession {
   confirmed: boolean
   status: ImportStatus
   error: string | null
+  read_filtered_only: boolean
 }
 
 export interface OutputFile {

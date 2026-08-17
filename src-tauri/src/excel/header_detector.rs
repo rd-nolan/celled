@@ -8,7 +8,11 @@ pub struct HeaderDetector;
 impl HeaderDetector {
     /// Detect the most likely header row from sheet rows.
     /// `rows[0]` is Excel row 1. Returned `row_index` is 1-indexed.
-    pub fn detect(rows: &[Vec<String>]) -> HeaderDetectionResult {
+    pub fn detect(
+        rows: &[Vec<String>],
+        sheet: Option<&crate::excel::SheetData>,
+        visible_only: bool,
+    ) -> HeaderDetectionResult {
         let scan_len = rows.len().min(SCAN_ROWS);
         if scan_len == 0 {
             return HeaderDetectionResult {
@@ -22,6 +26,11 @@ impl HeaderDetector {
         let mut best_score = f32::MIN;
 
         for i in 0..scan_len {
+            if let Some(sheet) = sheet {
+                if !sheet.is_row_visible(i + 1, visible_only) {
+                    continue;
+                }
+            }
             let score = score_row(rows, i, scan_len);
             if score > best_score {
                 best_score = score;
@@ -224,7 +233,7 @@ mod tests {
     #[test]
     fn detects_first_row_headers() {
         let rows = vec![row(&["姓名", "手机号"]), row(&["张三", "13812345678"])];
-        let result = HeaderDetector::detect(&rows);
+        let result = HeaderDetector::detect(&rows, None, false);
         assert_eq!(result.row_index, 1, "expected row 1, got {:?}", result);
     }
 
@@ -235,7 +244,7 @@ mod tests {
             row(&["姓名", "手机号"]),
             row(&["张三", "13812345678"]),
         ];
-        let result = HeaderDetector::detect(&rows);
+        let result = HeaderDetector::detect(&rows, None, false);
         assert_eq!(result.row_index, 2, "expected row 2, got {:?}", result);
     }
 
@@ -247,7 +256,7 @@ mod tests {
             row(&["姓名", "手机号", "部门"]),
             row(&["张三", "13812345678", "技术部"]),
         ];
-        let result = HeaderDetector::detect(&rows);
+        let result = HeaderDetector::detect(&rows, None, false);
         assert_eq!(result.row_index, 3, "expected row 3, got {:?}", result);
     }
 }

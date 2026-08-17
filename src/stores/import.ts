@@ -10,6 +10,7 @@ import {
   mergedOutputFileName,
   pickExcelFiles,
   pickSavePath,
+  removeImportSession,
   updateImportHeaderRow,
   updateImportSheet,
   updateMapping,
@@ -22,11 +23,13 @@ export const useImportStore = defineStore('import', () => {
   const analyzingFiles = shallowRef(false)
   const converting = shallowRef(false)
   const errorMessage = shallowRef('')
+  const warningMessage = shallowRef('')
   const mappingError = shallowRef('')
   const outputs = ref<OutputFile[]>([])
   const analyzingLabel = shallowRef('')
   const convertSucceeded = shallowRef(false)
   const convertError = shallowRef('')
+  const readFilteredOnly = ref(true)
 
   const activeSession = computed(
     () => sessions.value.find(session => session.id === activeSessionId.value) ?? null,
@@ -58,6 +61,47 @@ export const useImportStore = defineStore('import', () => {
     outputs.value = []
   }
 
+  async function refreshSessionsForReadMode() {
+    if (sessions.value.length === 0) {
+      return
+    }
+    analyzingFiles.value = true
+    errorMessage.value = ''
+    clearConvertResult()
+    try {
+      const current = [...sessions.value]
+      for (const session of current) {
+        analyzingLabel.value = session.file_name
+        replaceSession(
+          await updateImportHeaderRow(session.id, session.header_row, readFilteredOnly.value),
+        )
+      }
+    }
+    catch (error) {
+      errorMessage.value = asErrorMessage(error)
+    }
+    finally {
+      analyzingFiles.value = false
+      analyzingLabel.value = ''
+    }
+  }
+
+  async function setReadFilteredOnly(value: boolean) {
+    if (readFilteredOnly.value === value) {
+      return
+    }
+    readFilteredOnly.value = value
+    await refreshSessionsForReadMode()
+  }
+
+  function setWarning(message: string) {
+    warningMessage.value = message
+  }
+
+  function clearWarning() {
+    warningMessage.value = ''
+  }
+
   async function addFilesFromPaths(paths: string[]) {
     const template = useTemplateStore().currentTemplate
     if (!template) {
@@ -67,13 +111,46 @@ export const useImportStore = defineStore('import', () => {
     if (paths.length === 0) {
       return
     }
+
+    const existingPaths = new Set(sessions.value.map(session => session.file_path))
+    const duplicates: string[] = []
+    const newPaths: string[] = []
+    const seenInBatch = new Set<string>()
+
+    for (const path of paths) {
+      if (existingPaths.has(path) || seenInBatch.has(path)) {
+        duplicates.push(path)
+      }
+      else {
+        newPaths.push(path)
+        seenInBatch.add(path)
+      }
+    }
+
+    if (duplicates.length > 0) {
+      const names = duplicates.map(path => path.split(/[\\/]/).pop() ?? path).join('、')
+      warningMessage.value = `以下文件已在列表中，已跳过：${names}`
+    }
+    else {
+      warningMessage.value = ''
+    }
+
+    if (newPaths.length === 0) {
+      return
+    }
+
     analyzingFiles.value = true
     errorMessage.value = ''
     clearConvertResult()
     try {
-      for (const path of paths) {
+      for (const path of newPaths) {
         analyzingLabel.value = path.split(/[\\/]/).pop() ?? path
-        const session = await analyzeDataExcel(path, template.id)
+        const session = await analyzeDataExcel(
+          path,
+          template.id,
+          undefined,
+          readFilteredOnly.value,
+        )
         replaceSession(session)
       }
     }
@@ -104,6 +181,31 @@ export const useImportStore = defineStore('import', () => {
     mappingError.value = ''
   }
 
+  async function removeSession(id: string) {
+    errorMessage.value = ''
+    mappingError.value = ''
+    try {
+      await removeImportSession(id)
+    }
+    catch (error) {
+      errorMessage.value = asErrorMessage(error)
+      return
+    }
+
+    const index = sessions.value.findIndex(session => session.id === id)
+    if (index < 0) {
+      return
+    }
+
+    sessions.value.splice(index, 1)
+    clearConvertResult()
+
+    if (activeSessionId.value === id) {
+      const next = sessions.value[index] ?? sessions.value[index - 1] ?? null
+      activeSessionId.value = next?.id ?? null
+    }
+  }
+
   async function changeHeaderRow(headerRow: number) {
     const session = activeSession.value
     if (!session) {
@@ -112,7 +214,9 @@ export const useImportStore = defineStore('import', () => {
     errorMessage.value = ''
     mappingError.value = ''
     try {
-      replaceSession(await updateImportHeaderRow(session.id, headerRow))
+      replaceSession(
+        await updateImportHeaderRow(session.id, headerRow, readFilteredOnly.value),
+      )
     }
     catch (error) {
       errorMessage.value = asErrorMessage(error)
@@ -127,7 +231,9 @@ export const useImportStore = defineStore('import', () => {
     errorMessage.value = ''
     mappingError.value = ''
     try {
-      replaceSession(await updateImportSheet(session.id, sheetName))
+      replaceSession(
+        await updateImportSheet(session.id, sheetName, readFilteredOnly.value),
+      )
     }
     catch (error) {
       errorMessage.value = asErrorMessage(error)
@@ -198,9 +304,11 @@ export const useImportStore = defineStore('import', () => {
     activeSessionId.value = null
     outputs.value = []
     errorMessage.value = ''
+    warningMessage.value = ''
     mappingError.value = ''
     convertSucceeded.value = false
     convertError.value = ''
+    readFilteredOnly.value = true
   }
 
   return {
@@ -211,6 +319,7 @@ export const useImportStore = defineStore('import', () => {
     analyzingLabel,
     converting,
     errorMessage,
+    warningMessage,
     mappingError,
     outputs,
     convertSucceeded,
@@ -218,10 +327,15 @@ export const useImportStore = defineStore('import', () => {
     confirmedCount,
     allConfirmed,
     mergedOutput,
+    readFilteredOnly,
     setError,
+    setWarning,
+    clearWarning,
+    setReadFilteredOnly,
     addFilesFromPaths,
     addFiles,
     selectSession,
+    removeSession,
     changeHeaderRow,
     changeSheet,
     changeMapping,

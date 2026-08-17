@@ -1,13 +1,26 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use calamine::{open_workbook_auto, Data, Reader};
 
 use crate::error::AppError;
+use crate::excel::visibility::hidden_rows_for_sheet;
 
 #[derive(Debug, Clone)]
 pub struct SheetData {
     pub name: String,
     pub rows: Vec<Vec<String>>,
+    /// 1-indexed Excel row numbers marked hidden in the source workbook.
+    pub hidden_rows: HashSet<usize>,
+}
+
+impl SheetData {
+    pub fn is_row_visible(&self, excel_row: usize, visible_only: bool) -> bool {
+        if !visible_only {
+            return true;
+        }
+        !self.hidden_rows.contains(&excel_row)
+    }
 }
 
 /// Reads Excel workbooks via calamine. Never send full sheets to the frontend.
@@ -26,11 +39,15 @@ impl ExcelReader {
             return Err(AppError::EmptyWorksheet);
         }
         for name in &sheets {
-            let data = Self::read_sheet(path, name, Some(8))?;
+            let data = Self::read_sheet(path, name, Some(8), false)?;
             if data
                 .rows
                 .iter()
-                .any(|row| row.iter().any(|c| !c.trim().is_empty()))
+                .enumerate()
+                .any(|(idx, row)| {
+                    data.is_row_visible(idx + 1, false)
+                        && row.iter().any(|c| !c.trim().is_empty())
+                })
             {
                 return Ok(name.clone());
             }
@@ -42,8 +59,15 @@ impl ExcelReader {
         path: &Path,
         sheet_name: &str,
         max_rows: Option<usize>,
+        visible_rows_only: bool,
     ) -> Result<SheetData, AppError> {
         ensure_excel(path)?;
+        let hidden_rows = if visible_rows_only {
+            hidden_rows_for_sheet(path, sheet_name)?
+        } else {
+            HashSet::new()
+        };
+
         let mut workbook = open_workbook_auto(path)?;
         let range = workbook
             .worksheet_range(sheet_name)
@@ -53,6 +77,7 @@ impl ExcelReader {
             return Ok(SheetData {
                 name: sheet_name.to_string(),
                 rows: Vec::new(),
+                hidden_rows,
             });
         }
 
@@ -82,6 +107,7 @@ impl ExcelReader {
         Ok(SheetData {
             name: sheet_name.to_string(),
             rows,
+            hidden_rows,
         })
     }
 
